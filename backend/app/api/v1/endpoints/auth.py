@@ -9,7 +9,7 @@ from fastapi.security import OAuth2PasswordBearer
 from pydantic import ValidationError
 
 from app.core.config import get_settings
-from app.core.database import get_db_conn
+from app.core.database import QueryParameterError, RepositoryQueryError, get_db_conn
 from app.core.security import (
     TokenError,
     build_access_token,
@@ -28,6 +28,7 @@ from app.repositories.auth_repo import (
     insert_refresh_session,
     prune_expired_sessions,
     revoke_refresh_session,
+    revoke_all_user_sessions,
 )
 
 logger = logging.getLogger(__name__)
@@ -80,7 +81,7 @@ async def login(
 ) -> AccessTokenResponse:
     try:
         row = await fetch_user_by_username(conn, payload.username)
-    except (aiomysql.Error, TimeoutError) as exc:
+    except (RepositoryQueryError, QueryParameterError, aiomysql.Error, TimeoutError) as exc:
         raise _auth_unavailable("user_query_failed") from exc
 
     if row is None:
@@ -189,7 +190,7 @@ async def refresh(
 
     try:
         current_user_row = await fetch_user_by_id(conn, user_id)
-    except (aiomysql.Error, TimeoutError) as exc:
+    except (RepositoryQueryError, QueryParameterError, aiomysql.Error, TimeoutError) as exc:
         raise _auth_unavailable("user_query_failed") from exc
 
     if current_user_row is None:
@@ -238,7 +239,7 @@ async def refresh(
         )
     except HTTPException:
         raise
-    except (aiomysql.Error, TimeoutError) as exc:
+    except (RepositoryQueryError, QueryParameterError, aiomysql.Error, TimeoutError) as exc:
         raise _auth_unavailable("refresh_store_rotation_failed") from exc
 
     _set_refresh_cookie(response, rotated_refresh_token)
@@ -278,6 +279,9 @@ async def logout(
 
     _clear_refresh_cookie(response)
     return {"ok": True}
+
+
+@router.post("/logout-all")
 async def logout_all(token: str | None = Depends(oauth2_scheme), conn: aiomysql.Connection = Depends(get_db_conn)) -> dict[str, int]:
     if not token:
         raise _unauthorized("missing_bearer_token")
@@ -287,7 +291,7 @@ async def logout_all(token: str | None = Depends(oauth2_scheme), conn: aiomysql.
 
     try:
         revoked = await revoke_all_user_sessions(conn, user_id=user_id, reason="logout_all")
-    except (aiomysql.Error, TimeoutError) as exc:
+    except (RepositoryQueryError, QueryParameterError, aiomysql.Error, TimeoutError) as exc:
         raise _auth_unavailable("refresh_store_logout_all_failed") from exc
 
     logger.info("auth.logout_all.success", extra={"user_id": user_id, "revoked": revoked})

@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException, Request, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import ValidationError
 
-from app.core.database import get_db_conn
+from app.core.database import QueryParameterError, RepositoryQueryError, get_db_conn
 from app.core.security import TokenError, decode_access_token
 from app.models.auth_types import UserAuthRecord
 from app.repositories.auth_repo import fetch_user_by_id
@@ -77,7 +77,7 @@ async def get_current_principal(
 
     try:
         row = await fetch_user_by_id(conn, user_id)
-    except (aiomysql.Error, TimeoutError):
+    except (RepositoryQueryError, QueryParameterError, aiomysql.Error, TimeoutError):
         logger.warning("rbac.deny", extra={"reason": "principal_lookup_failed", "endpoint": endpoint})
         raise _service_unavailable()
 

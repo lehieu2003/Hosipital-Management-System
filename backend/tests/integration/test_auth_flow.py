@@ -232,6 +232,13 @@ async def test_invalid_credentials_and_malformed_inputs(auth_client, caplog):
     assert invalid.status_code == 401
     assert invalid.json()["detail"] == "invalid_credentials"
 
+    malicious_username = await client.post(
+        "/api/v1/auth/login",
+        json={"username": "' OR 1=1 --", "password": "secret123"},
+    )
+    assert malicious_username.status_code == 401
+    assert malicious_username.json()["detail"] == "invalid_credentials"
+
     malformed_cookie = await client.post(
         "/api/v1/auth/refresh",
         cookies={get_settings().refresh_cookie_name: "not-a-jwt"},
@@ -245,6 +252,11 @@ async def test_invalid_credentials_and_malformed_inputs(auth_client, caplog):
 
     login_failures = [r for r in caplog.records if r.msg == "auth.login.failure"]
     assert any(getattr(r, "reason", "") == "invalid_credentials" for r in login_failures)
+
+    refresh_denials = [r for r in caplog.records if r.msg == "auth.refresh.denied"]
+    assert any(getattr(r, "reason", "") == "invalid_refresh_token" for r in refresh_denials)
+    assert all("not-a-jwt" not in r.getMessage() for r in refresh_denials)
+    assert all(getattr(r, "token_fingerprint", "") != "not-a-jwt" for r in refresh_denials)
 
 
 @pytest.mark.asyncio

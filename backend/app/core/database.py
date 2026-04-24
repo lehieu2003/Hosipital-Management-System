@@ -10,8 +10,30 @@ from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
+PoolParams = tuple[Any, ...] | dict[str, Any] | list[Any] | None
+
 _pool: aiomysql.Pool | None = None
 _pool_lock = asyncio.Lock()
+
+
+class QueryParameterError(ValueError):
+    """Raised when a repository call attempts an unsupported parameter shape."""
+
+
+class RepositoryQueryError(RuntimeError):
+    """Raised for repository-layer execution failures after structured logging."""
+
+
+def _normalize_params(params: PoolParams) -> tuple[Any, ...] | dict[str, Any] | None:
+    if params is None:
+        return None
+    if isinstance(params, tuple):
+        return params
+    if isinstance(params, list):
+        return tuple(params)
+    if isinstance(params, dict):
+        return params
+    raise QueryParameterError(f"unsupported_query_params:{type(params).__name__}")
 
 
 async def init_pool() -> aiomysql.Pool:
@@ -92,9 +114,61 @@ async def get_db_conn() -> AsyncIterator[aiomysql.Connection]:
         pool.release(conn)
 
 
-async def fetch_one(query: str, params: tuple[Any, ...] | None = None) -> dict[str, Any] | None:
-    pool = get_pool()
-    async with pool.acquire() as conn:
+async def query_fetch_one(
+    conn: aiomysql.Connection,
+    *,
+    statement_id: str,
+    query: str,
+    params: PoolParams = None,
+) -> dict[str, Any] | None:
+    try:
+        normalized = _normalize_params(params)
         async with conn.cursor(aiomysql.DictCursor) as cursor:
-            await cursor.execute(query, params)
+            await cursor.execute(query, normalized)
             return await cursor.fetchone()
+    except QueryParameterError:
+        logger.warning(
+            "db.query.failure",
+            extra={"statement_id": statement_id, "reason": "parameter_binding", "error_type": "QueryParameterError"},
+        )
+        raise
+    except (aiomysql.Error, TimeoutError) as exc:
+        logger.warning(
+            "db.query.failure",
+            extra={
+                "statement_id": statement_id,
+                "reason": "execution_failed",
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise RepositoryQueryError(f"query_failed:{statement_id}") from exc
+
+
+async def query_execute(
+    conn: aiomysql.Connection,
+    *,
+    statement_id: str,
+    query: str,
+    params: PoolParams = None,
+) -> int:
+    try:
+        normalized = _normalize_params(params)
+        async with conn.cursor() as cursor:
+            await cursor.execute(query, normalized)
+            return cursor.rowcount
+    except QueryParameterError:
+        logger.warning(
+            "db.query.failure",
+            extra={"statement_id": statement_id, "reason": "parameter_binding", "error_type": "QueryParameterError"},
+        )
+        raise
+    except (aiomysql.Error, TimeoutError) as exc:
+        logger.warning(
+            "db.query.failure",
+            extra={
+                "statement_id": statement_id,
+                "reason": "execution_failed",
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise RepositoryQueryError(f"query_failed:{statement_id}") from exc

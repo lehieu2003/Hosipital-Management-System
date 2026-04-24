@@ -173,6 +173,21 @@ async def test_tampered_role_claim_cannot_escalate_privilege(rbac_client, caplog
 
 
 @pytest.mark.asyncio
+async def test_sql_like_subject_claim_is_rejected_before_lookup(rbac_client, caplog):
+    caplog.set_level(logging.INFO)
+    client, _ = rbac_client
+
+    response = await client.get(
+        "/api/v1/probe/admin",
+        headers=_auth_header(user_id="1 OR 1=1", role="admin", username="doctor-user"),
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "invalid_access_token"
+    assert any(r.msg == "rbac.deny" and getattr(r, "reason", "") == "malformed_claims" for r in caplog.records)
+
+
+@pytest.mark.asyncio
 async def test_deny_by_default_without_allowed_roles(rbac_client, caplog):
     caplog.set_level(logging.INFO)
     client, _ = rbac_client

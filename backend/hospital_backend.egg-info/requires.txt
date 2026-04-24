@@ -1,0 +1,10 @@
+fastapi<1.0.0,>=0.115.0
+uvicorn[standard]<1.0.0,>=0.30.0
+aiomysql<1.0.0,>=0.2.0
+pydantic-settings<3.0.0,>=2.3.0
+
+[dev]
+pytest<9.0.0,>=8.2.0
+pytest-asyncio<1.0.0,>=0.23.0
+httpx<1.0.0,>=0.27.0
+asgi-lifespan<3.0.0,>=2.1.0

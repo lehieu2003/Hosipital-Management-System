@@ -21,11 +21,15 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256", validation_alias="JWT_ALGORITHM")
     jwt_access_ttl_minutes: int = Field(default=15, ge=1, validation_alias="JWT_ACCESS_TTL_MINUTES")
     jwt_refresh_ttl_days: int = Field(default=7, ge=1, validation_alias="JWT_REFRESH_TTL_DAYS")
+    jwt_issuer: str = Field(default="hospital-backend", validation_alias="JWT_ISSUER")
+    jwt_access_audience: str = Field(default="hospital-api", validation_alias="JWT_ACCESS_AUDIENCE")
 
     refresh_cookie_name: str = Field(default="refresh_token", validation_alias="REFRESH_COOKIE_NAME")
     refresh_cookie_secure: bool = Field(default=False, validation_alias="REFRESH_COOKIE_SECURE")
     refresh_cookie_samesite: str = Field(default="lax", validation_alias="REFRESH_COOKIE_SAMESITE")
     refresh_cookie_domain: str | None = Field(default=None, validation_alias="REFRESH_COOKIE_DOMAIN")
+    refresh_cookie_path: str = Field(default="/api/v1/auth", validation_alias="REFRESH_COOKIE_PATH")
+    refresh_cookie_httponly: bool = Field(default=True, validation_alias="REFRESH_COOKIE_HTTPONLY")
 
     db_host: str = Field(..., validation_alias="DB_HOST")
     db_port: int = Field(default=3306, ge=1, le=65535, validation_alias="DB_PORT")
@@ -48,6 +52,10 @@ class Settings(BaseSettings):
     def validate_pool_bounds(self) -> "Settings":
         if self.db_pool_min_size > self.db_pool_max_size:
             raise ValueError("DB_POOL_MIN_SIZE must be <= DB_POOL_MAX_SIZE")
+
+        if self.refresh_cookie_samesite.lower() not in {"lax", "strict", "none"}:
+            raise ValueError("REFRESH_COOKIE_SAMESITE must be one of: lax, strict, none")
+
         return self
 
 

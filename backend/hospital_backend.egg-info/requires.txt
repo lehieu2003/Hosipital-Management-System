@@ -2,6 +2,8 @@ fastapi<1.0.0,>=0.115.0
 uvicorn[standard]<1.0.0,>=0.30.0
 aiomysql<1.0.0,>=0.2.0
 pydantic-settings<3.0.0,>=2.3.0
+PyJWT<3.0.0,>=2.8.0
+passlib[bcrypt]<2.0.0,>=1.7.4
 
 [dev]
 pytest<9.0.0,>=8.2.0

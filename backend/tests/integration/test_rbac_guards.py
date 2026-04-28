@@ -120,6 +120,9 @@ def _auth_header(*, user_id: int, role: str, username: str) -> dict[str, str]:
         ("/api/v1/probe/admin", 3, "doctor", "doctor-user", 403),
         ("/api/v1/probe/reception", 2, "receptionist", "reception-user", 200),
         ("/api/v1/probe/doctor", 3, "doctor", "doctor-user", 200),
+        ("/api/v1/appointments/doctor-queue", 3, "doctor", "doctor-user", 200),
+        ("/api/v1/appointments/doctor-queue", 1, "admin", "admin-user", 403),
+        ("/api/v1/appointments/doctor-queue", 2, "receptionist", "reception-user", 403),
     ],
 )
 async def test_role_matrix_enforced(rbac_client, path, user_id, role, username, expected_status):

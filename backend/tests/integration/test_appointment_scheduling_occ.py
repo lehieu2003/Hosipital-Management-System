@@ -1,8 +1,16 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import os
 
 from fastapi.testclient import TestClient
+
+os.environ.setdefault("JWT_ACCESS_SECRET", "test-access-secret")
+os.environ.setdefault("JWT_REFRESH_SECRET", "test-refresh-secret")
+os.environ.setdefault("DB_HOST", "localhost")
+os.environ.setdefault("DB_USER", "test")
+os.environ.setdefault("DB_PASSWORD", "test")
+os.environ.setdefault("DB_NAME", "test")
 
 from app.main import create_app
 
@@ -41,7 +49,7 @@ def test_appointment_update_with_stale_version_returns_409() -> None:
             "/api/v1/appointments",
             json={
                 "patient_id": 102,
-                "scheduled_for": datetime(2026, 4, 29, 10, 0, tzinfo=UTC).isoformat(),
+                "scheduled_for": datetime(2026, 4, 29, 10, 0, tzinfo=timezone.utc).isoformat(),
             },
         )
         assert create_resp.status_code == 201, create_resp.text

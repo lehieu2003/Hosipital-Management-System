@@ -7,13 +7,14 @@
     "paths": {
       "@/*": ["src/*"]
     },
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "ignoreDeprecations": "6.0",
     "types": ["node", "vitest/globals"]
   },
   "include": ["src", "tests", "prisma.config.ts"]

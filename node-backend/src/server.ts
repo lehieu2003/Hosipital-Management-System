@@ -1,6 +1,6 @@
-import { createApp } from '@/app';
-import { appConfig } from '@/shared/configs/app.config';
-import { logger } from '@/shared/utils/logger';
+import { createApp } from './app.js';
+import { appConfig } from './shared/configs/app.config.js';
+import { logger } from './shared/utils/logger.js';
 
 const app = createApp();
 

@@ -1,0 +1,54 @@
+import type { NextFunction, Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+
+import { AppError } from '../../shared/errors/app-error.js';
+import { verifyAccessToken } from '../../shared/helpers/jwt.helper.js';
+import { authRepository } from '../../domain/repositories/auth.repository.js';
+
+type AuthenticatedRequest = Request & {
+  auth?: {
+    userId: string;
+    role: string;
+    username: string;
+  };
+};
+
+export const authMiddleware = async (
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction,
+) => {
+  const authorization = req.headers.authorization;
+  if (!authorization?.startsWith('Bearer ')) {
+    return next(new AppError('Bearer token is required', 401, 'MISSING_BEARER_TOKEN'));
+  }
+
+  const token = authorization.slice('Bearer '.length).trim();
+
+  try {
+    const payload = verifyAccessToken(token);
+    const user = await authRepository.findUserById(payload.sub);
+
+    if (!user || !user.isActive) {
+      return next(new AppError('Invalid access token', 401, 'INVALID_ACCESS_TOKEN'));
+    }
+
+    req.auth = {
+      userId: user.id,
+      role: user.role,
+      username: user.username,
+    };
+
+    return next();
+  } catch (error) {
+    if (error instanceof AppError) {
+      return next(error);
+    }
+
+    if (error instanceof jwt.TokenExpiredError) {
+      return next(new AppError('Access token expired', 401, 'EXPIRED_ACCESS_TOKEN'));
+    }
+
+    return next(new AppError('Invalid access token', 401, 'INVALID_ACCESS_TOKEN'));
+  }
+};

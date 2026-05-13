@@ -1,12 +1,14 @@
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
-import pinoHttp from 'pino-http';
+import pinoHttpModule from 'pino-http';
 
-import { errorMiddleware } from '@/app/middlewares/error.middleware';
-import { v1Routes } from '@/app/routes/v1';
-import { appConfig } from '@/shared/configs/app.config';
-import { logger } from '@/shared/utils/logger';
+import { errorMiddleware } from './app/middlewares/error.middleware.js';
+import { v1Routes } from './app/routes/v1/index.js';
+import { appConfig } from './shared/configs/app.config.js';
+import { logger } from './shared/utils/logger.js';
+
+const pinoHttp = pinoHttpModule.default ?? pinoHttpModule;
 
 export const createApp = () => {
   const app = express();

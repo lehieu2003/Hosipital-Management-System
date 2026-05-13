@@ -41,6 +41,7 @@ project-root/
 ```
 
 ## Layered Architecture
+
 ```
 Request → Routes → Middleware → Controllers → Services → Repositories → Database
 ```
@@ -52,11 +53,13 @@ Request → Routes → Middleware → Controllers → Services → Repositories 
 - **Models**: Data schemas and types
 
 ## File Naming
+
 - Source files: `kebab-case.js` (`user-service.js`)
 - Test files: `[name].test.js` (`user-service.test.js`)
 - Config files: `kebab-case.js` or `kebab-case.json`
 
 ## Environment Files
+
 - `.env` — Local development (gitignored)
 - `.env.example` — Template committed to git
 - `.env.test` — Test environment (gitignored)

@@ -1,0 +1,250 @@
+:root {
+  color-scheme: dark;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  background:
+    radial-gradient(circle at top left, rgba(42, 84, 138, 0.28), transparent 32%),
+    radial-gradient(circle at top right, rgba(10, 146, 120, 0.18), transparent 28%),
+    #08111f;
+  color: #e8eef7;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 2rem;
+  border-right: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(8, 17, 31, 0.88);
+  backdrop-filter: blur(18px);
+}
+
+.sidebar__title {
+  margin: 0.25rem 0 0.75rem;
+  font-size: 1.9rem;
+  line-height: 1.1;
+}
+
+.sidebar__footer {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.content {
+  padding: 2rem;
+}
+
+.panel,
+.login-card,
+.hero-card,
+.stat-card,
+.queue-card {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 24px;
+  background: rgba(15, 23, 42, 0.72);
+  box-shadow: 0 24px 80px rgba(2, 6, 23, 0.35);
+}
+
+.panel {
+  padding: 1.5rem;
+}
+
+.panel__header {
+  margin-bottom: 1.5rem;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.75rem;
+  color: #8fb7ff;
+}
+
+.muted {
+  color: #9fb0ca;
+}
+
+.nav {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.nav__link {
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  color: #d9e5f7;
+  text-decoration: none;
+  background: rgba(30, 41, 59, 0.45);
+  border: 1px solid transparent;
+}
+
+.nav__link--active {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(16, 185, 129, 0.24));
+  border-color: rgba(147, 197, 253, 0.35);
+}
+
+.button {
+  border: 0;
+  border-radius: 14px;
+  padding: 0.85rem 1.1rem;
+  color: #eff6ff;
+  background: linear-gradient(135deg, #2563eb, #0f766e);
+}
+
+.button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.button--ghost {
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.login-layout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+}
+
+.hero-card {
+  margin: 2rem 1rem 2rem 2rem;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.login-card {
+  margin: 2rem 2rem 2rem 1rem;
+  padding: 2rem;
+  display: grid;
+  align-self: center;
+  gap: 1rem;
+}
+
+.input-group {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.input,
+.select {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  padding: 0.85rem 0.95rem;
+  background: rgba(15, 23, 42, 0.8);
+  color: #eff6ff;
+}
+
+.status {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 14px;
+}
+
+.status--danger {
+  background: rgba(127, 29, 29, 0.35);
+  color: #fecaca;
+}
+
+.status--warning {
+  background: rgba(120, 53, 15, 0.32);
+  color: #fed7aa;
+}
+
+.status--info {
+  background: rgba(30, 64, 175, 0.28);
+  color: #bfdbfe;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.grid--stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 1rem;
+}
+
+.stat-card,
+.queue-card {
+  padding: 1.15rem;
+}
+
+.queue-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.queue-item {
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.inline-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 960px) {
+  .app-shell,
+  .login-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-card,
+  .login-card {
+    margin: 1rem;
+  }
+
+  .content {
+    padding: 1rem;
+  }
+
+  .grid--stats {
+    grid-template-columns: 1fr;
+  }
+}

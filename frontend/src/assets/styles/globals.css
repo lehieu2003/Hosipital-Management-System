@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Manrope', 'Segoe UI', sans-serif;
+  --color-clinical-50: #f6f9fc;
+  --color-clinical-100: #eef4fb;
+  --color-clinical-200: #dbe8f4;
+  --color-clinical-300: #c5d8ea;
+  --color-clinical-500: #5d7c9a;
+  --color-clinical-700: #28405a;
+  --color-clinical-900: #112033;
+  --color-brand-50: #eef6ff;
+  --color-brand-100: #d8ebff;
+  --color-brand-500: #2f6fed;
+  --color-brand-600: #1f59d1;
+  --color-brand-700: #1a479f;
+  --color-mint-50: #edfdf8;
+  --color-mint-100: #cff7eb;
+  --color-mint-500: #0f9f80;
+  --color-mint-700: #0f7660;
+  --color-danger-50: #fff1f2;
+  --color-danger-200: #fecdd3;
+  --color-danger-700: #be123c;
+  --shadow-panel: 0 18px 48px rgba(17, 32, 51, 0.08);
+  --shadow-soft: 0 10px 30px rgba(17, 32, 51, 0.06);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply min-h-screen bg-clinical-50 text-slate-900 antialiased;
+    background-image:
+      radial-gradient(circle at top left, rgba(47, 111, 237, 0.16), transparent 28%),
+      radial-gradient(circle at top right, rgba(15, 159, 128, 0.12), transparent 24%),
+      linear-gradient(180deg, #f8fbfe 0%, #f3f7fb 100%);
+  }
+
+  body,
+  button,
+  input,
+  select,
+  textarea {
+    font-family: var(--font-sans);
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  code {
+    @apply rounded-md bg-slate-100 px-1.5 py-0.5 text-[0.9em] text-slate-700;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

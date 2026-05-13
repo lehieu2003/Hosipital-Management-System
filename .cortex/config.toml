@@ -1,0 +1,13 @@
+[project]
+name = "hospital-management-system"
+
+[paths]
+agents = ".cortex/agents"
+commands = ".cortex/commands"
+references = ".cortex/references"
+rules = ".cortex/rules"
+skills = ".cortex/skills"
+
+[notes]
+migrated_from = ".claude"
+comment = "Migrated guidance should be reviewed for repo- and tool-specific assumptions."

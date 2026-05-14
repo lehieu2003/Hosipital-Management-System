@@ -101,8 +101,22 @@ The protected shell also exposes:
 
 - `data-role` on `app-shell`
 - `data-auth-status` on `app-shell`
+- `data-session-notice` on `app-shell`
+- `data-session-notice` on `login-page`
 
-These are the preferred diagnostics for auth/session and route-gating checks.
+Additional operational-state surfaces:
+
+- `data-testid="route-forbidden-state"`
+- `data-testid="admin-overview-loading-state"`
+- `data-testid="admin-overview-unavailable-state"`
+- `data-testid="reception-scheduling-loading-state"`
+- `data-testid="reception-scheduling-unavailable-state"`
+- `data-testid="doctor-queue-loading-state"`
+- `data-testid="doctor-queue-unavailable-state"`
+- `data-screen-status` on operational state cards
+- `data-screen-code` on operational state cards
+
+These are the preferred diagnostics for auth/session, role gating, and fail-closed operational checks.
 
 ## Testing
 
@@ -112,13 +126,21 @@ Run the task verification command:
 npm --prefix frontend run test -- --runInBand
 ```
 
+Useful focused commands during iteration:
+
+```bash
+npm --prefix frontend run test -- --runInBand src/tests/unit/auth/AuthShell.test.tsx
+npm --prefix frontend run test -- --runInBand src/tests/unit/opd/OperationalFoundations.test.tsx
+```
+
 Current coverage in the foundation layer includes:
 
 - route shell smoke tests
 - config default/override tests
 - API client refresh + replay behavior
-- fail-closed auth failure mapping
+- fail-closed auth refresh recovery and login-boundary transitions
 - role-aware navigation and shell observability tests
+- fail-closed operational foundation states for unwired OPD contracts
 
 ## Notes for Future Slices
 

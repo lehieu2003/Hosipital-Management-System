@@ -1,12 +1,13 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type PropsWithChildren,
 } from 'react';
 
-import { ApiError, type ApiErrorCode } from '@/lib/api/client';
+import { ApiError, type ApiErrorCode, type SessionManager } from '@/lib/api/client';
 import { appEnv } from '@/lib/config';
 import {
   AuthContext,
@@ -17,6 +18,7 @@ import {
   type AuthStatus,
   type AuthSuccessEnvelope,
   type MeSuccessEnvelope,
+  type SessionNotice,
   type UserSession,
 } from '@/lib/auth/session';
 
@@ -29,9 +31,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [authStatus, setAuthStatus] = useState<AuthStatus>(() =>
     readStoredSession() ? 'authenticated' : 'anonymous',
   );
+  const [sessionNotice, setSessionNotice] = useState<SessionNotice>(() =>
+    readStoredSession() ? null : 'signed-out',
+  );
   const refreshPromiseRef = useRef<Promise<UserSession | null> | null>(null);
+  const validatedAccessTokenRef = useRef<string | null>(null);
 
   const clearSession = useCallback(() => {
+    validatedAccessTokenRef.current = null;
     setSession(null);
     persistSession(null);
   }, []);
@@ -41,8 +48,35 @@ export function AuthProvider({ children }: PropsWithChildren) {
     persistSession(nextSession);
   }, []);
 
+  const failClosed = useCallback(
+    (notice: Exclude<SessionNotice, null>) => {
+      clearSession();
+      setSessionNotice(notice);
+      setAuthStatus(notice === 'refresh-failed' ? 'refresh-failed' : 'anonymous');
+    },
+    [clearSession],
+  );
+
+  const handleAuthFailure = useCallback(
+    (error: ApiError) => {
+      if (error.code === 'REFRESH_FAILED') {
+        failClosed('refresh-failed');
+        return;
+      }
+
+      if (error.code === 'AUTH_EXPIRED') {
+        setSessionNotice('expired');
+        setAuthStatus((current) =>
+          current === 'authenticated' || current === 'booting' ? 'refreshing' : current,
+        );
+      }
+    },
+    [failClosed],
+  );
+
   const refresh = useCallback(async (): Promise<UserSession | null> => {
     if (!refreshPromiseRef.current) {
+      setSessionNotice('expired');
       setAuthStatus((current) =>
         current === 'authenticated' || current === 'booting' ? 'refreshing' : current,
       );
@@ -57,8 +91,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           if (!response.ok) {
             const error = await toApiErrorFromResponse(response);
             if (isRefreshFailureCode(error.code)) {
-              clearSession();
-              setAuthStatus('refresh-failed');
+              failClosed('refresh-failed');
               return null;
             }
 
@@ -67,18 +100,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
           const payload = (await response.json()) as AuthSuccessEnvelope;
           const nextSession = toUserSession(payload.data);
+          validatedAccessTokenRef.current = nextSession.accessToken;
           applySession(nextSession);
+          setSessionNotice(null);
           setAuthStatus('authenticated');
           return nextSession;
         } catch (error) {
           if (error instanceof ApiError && isRefreshFailureCode(error.code)) {
-            clearSession();
-            setAuthStatus('refresh-failed');
+            failClosed('refresh-failed');
             return null;
           }
 
-          clearSession();
-          setAuthStatus('refresh-failed');
+          failClosed('refresh-failed');
           return null;
         } finally {
           refreshPromiseRef.current = null;
@@ -87,10 +120,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     return refreshPromiseRef.current;
-  }, [applySession, clearSession]);
+  }, [applySession, failClosed]);
 
   const login = useCallback(
     async (username: string, password: string) => {
+      setSessionNotice(null);
+      setAuthStatus('authenticating');
+
       const response = await window.fetch(`${appEnv.apiBaseUrl}/auth/login`, {
         method: 'POST',
         credentials: 'include',
@@ -101,12 +137,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
       });
 
       if (!response.ok) {
+        setAuthStatus('anonymous');
         throw await toApiErrorFromResponse(response);
       }
 
       const payload = (await response.json()) as AuthSuccessEnvelope;
       const nextSession = toUserSession(payload.data);
+      validatedAccessTokenRef.current = nextSession.accessToken;
       applySession(nextSession);
+      setSessionNotice(null);
       setAuthStatus('authenticated');
       return nextSession;
     },
@@ -121,63 +160,80 @@ export function AuthProvider({ children }: PropsWithChildren) {
       });
     } finally {
       clearSession();
+      setSessionNotice('signed-out');
       setAuthStatus('anonymous');
     }
   }, [clearSession]);
+
+  const sessionManager = useMemo<SessionManager>(
+    () => ({
+      getSession: () => (session ? { accessToken: session.accessToken } : null),
+      refreshSession: refresh,
+      onAuthFailure: handleAuthFailure,
+    }),
+    [handleAuthFailure, refresh, session],
+  );
 
   useEffect(() => {
     if (!session?.accessToken) {
       return;
     }
 
+    if (validatedAccessTokenRef.current === session.accessToken) {
+      return;
+    }
+
     let cancelled = false;
     const currentAccessToken = session.accessToken;
+
+    const executeRequest = async <T,>(path: string, init: RequestInit, accessToken: string) => {
+      const headers = new Headers(init.headers);
+
+      if (!headers.has('Authorization')) {
+        headers.set('Authorization', `Bearer ${accessToken}`);
+      }
+
+      const response = await window.fetch(`${appEnv.apiBaseUrl}${path}`, {
+        ...init,
+        headers,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw await toApiErrorFromResponse(response);
+      }
+
+      if (response.status === 204) {
+        return { accessToken, data: undefined as T };
+      }
+
+      return {
+        accessToken,
+        data: (await response.json()) as T,
+      };
+    };
 
     const requestWithAuth = async <T,>(
       path: string,
       init: RequestInit & { replayAfterRefresh?: boolean } = {},
-    ): Promise<T> => {
-      const execute = async (accessToken: string | null) => {
-        const headers = new Headers(init.headers);
-
-        if (accessToken && !headers.has('Authorization')) {
-          headers.set('Authorization', `Bearer ${accessToken}`);
-        }
-
-        const response = await window.fetch(`${appEnv.apiBaseUrl}${path}`, {
-          ...init,
-          headers,
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          throw await toApiErrorFromResponse(response);
-        }
-
-        if (response.status === 204) {
-          return undefined as T;
-        }
-
-        return (await response.json()) as T;
-      };
-
+    ) => {
       try {
-        return await execute(currentAccessToken);
+        return await executeRequest<T>(path, init, currentAccessToken);
       } catch (error) {
         if (
           error instanceof ApiError &&
           error.code === 'AUTH_EXPIRED' &&
           init.replayAfterRefresh !== false
         ) {
+          setSessionNotice('expired');
           const nextSession = await refresh();
           if (nextSession) {
-            return execute(nextSession.accessToken);
+            return executeRequest<T>(path, init, nextSession.accessToken);
           }
         }
 
         if (error instanceof ApiError && isRefreshFailureCode(error.code)) {
-          clearSession();
-          setAuthStatus('refresh-failed');
+          failClosed('refresh-failed');
         }
 
         throw error;
@@ -197,14 +253,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
           return;
         }
 
+        const currentUser = payload.data.data;
         const hydratedSession: UserSession = {
-          accessToken: currentAccessToken,
-          userId: payload.data.id,
-          username: payload.data.username,
-          role: normalizeRole(payload.data.role),
+          accessToken: payload.accessToken,
+          userId: currentUser.id,
+          username: currentUser.username,
+          role: normalizeRole(currentUser.role),
         };
 
+        validatedAccessTokenRef.current = hydratedSession.accessToken;
         applySession(hydratedSession);
+        setSessionNotice(null);
         setAuthStatus('authenticated');
       } catch (error) {
         if (cancelled) {
@@ -212,13 +271,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
 
         if (error instanceof ApiError && isRefreshFailureCode(error.code)) {
-          clearSession();
-          setAuthStatus('refresh-failed');
+          failClosed('refresh-failed');
           return;
         }
 
-        clearSession();
-        setAuthStatus('anonymous');
+        failClosed('signed-out');
       }
     };
 
@@ -227,13 +284,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return () => {
       cancelled = true;
     };
-  }, [applySession, clearSession, refresh, session?.accessToken]);
+  }, [applySession, failClosed, refresh, session?.accessToken]);
 
   return (
     <AuthContext.Provider
       value={{
         session,
         authStatus,
+        sessionNotice,
+        sessionManager,
         login,
         logout,
         refresh,

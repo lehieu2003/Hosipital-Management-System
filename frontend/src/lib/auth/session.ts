@@ -1,15 +1,18 @@
 import { createContext, useContext } from 'react';
 
-import type { SessionSnapshot } from '@/lib/api/client';
+import type { SessionManager, SessionSnapshot } from '@/lib/api/client';
 
 export type UserRole = 'admin' | 'doctor' | 'receptionist';
 
 export type AuthStatus =
   | 'booting'
+  | 'authenticating'
   | 'authenticated'
   | 'anonymous'
   | 'refreshing'
   | 'refresh-failed';
+
+export type SessionNotice = 'signed-out' | 'expired' | 'refresh-failed' | null;
 
 export type UserSession = SessionSnapshot & {
   userId: string;
@@ -20,6 +23,8 @@ export type UserSession = SessionSnapshot & {
 export type AuthContextValue = {
   session: UserSession | null;
   authStatus: AuthStatus;
+  sessionNotice: SessionNotice;
+  sessionManager: SessionManager;
   login: (username: string, password: string) => Promise<UserSession>;
   logout: () => Promise<void>;
   refresh: () => Promise<UserSession | null>;

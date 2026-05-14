@@ -18,9 +18,15 @@ function buildAuthValue(overrides: Partial<AuthContextValue> = {}): AuthContextV
   return {
     session,
     authStatus: 'authenticated',
+    sessionNotice: null,
+    sessionManager: {
+      getSession: () => ({ accessToken: 'access-token' }),
+      refreshSession: vi.fn().mockResolvedValue({ accessToken: 'fresh-token' }),
+      onAuthFailure: vi.fn(),
+    },
     login: vi.fn(),
     logout: noopAsync,
-    refresh: vi.fn(),
+    refresh: vi.fn().mockResolvedValue({ accessToken: 'fresh-token', ...session }),
     ...overrides,
   };
 }
@@ -49,6 +55,7 @@ describe('MainLayout', () => {
     const shell = screen.getByTestId('app-shell');
     expect(shell).toHaveAttribute('data-role', 'admin');
     expect(shell).toHaveAttribute('data-auth-status', 'authenticated');
+    expect(shell).toHaveAttribute('data-session-notice', 'none');
 
     const nav = screen.getByTestId('primary-navigation');
     expect(within(nav).getByRole('link', { name: 'Admin Dashboard' })).toBeInTheDocument();
@@ -57,23 +64,23 @@ describe('MainLayout', () => {
     expect(screen.getByText('Admin content')).toBeInTheDocument();
   });
 
-  it('hides admin navigation from receptionist users and surfaces refresh failure state', () => {
+  it('hides admin navigation from receptionist users and preserves session diagnostics', () => {
     renderLayout(
       buildAuthValue({
-        authStatus: 'refresh-failed',
         session: {
           accessToken: 'access-token',
           role: 'receptionist',
           userId: 'user-2',
           username: 'riley',
         },
+        sessionNotice: 'expired',
       }),
       '/app/reception/scheduling',
     );
 
     const shell = screen.getByTestId('app-shell');
     expect(shell).toHaveAttribute('data-role', 'receptionist');
-    expect(screen.getByTestId('refresh-failed-banner')).toBeInTheDocument();
+    expect(shell).toHaveAttribute('data-session-notice', 'expired');
 
     const nav = screen.getByTestId('primary-navigation');
     expect(within(nav).queryByRole('link', { name: 'Admin Dashboard' })).not.toBeInTheDocument();

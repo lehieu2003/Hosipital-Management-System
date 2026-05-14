@@ -93,7 +93,7 @@ function navLinkClass(isActive: boolean) {
 }
 
 export function MainLayout() {
-  const { session, logout, authStatus } = useAuth();
+  const { session, logout, authStatus, sessionNotice } = useAuth();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const pageTitle = titles[location.pathname] ?? 'Hospital Dashboard';
@@ -106,6 +106,7 @@ export function MainLayout() {
       )}
       data-auth-status={authStatus}
       data-role={session?.role ?? 'anonymous'}
+      data-session-notice={sessionNotice ?? 'none'}
       data-testid="app-shell"
     >
       <aside

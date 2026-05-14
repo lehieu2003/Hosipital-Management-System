@@ -4,6 +4,7 @@ import {
   ArrowRight,
   CalendarClock,
   GalleryVerticalEnd,
+  ShieldAlert,
   ShieldCheck,
   Stethoscope,
   TriangleAlert,
@@ -31,6 +32,7 @@ type LocationState = {
   from?: {
     pathname: string;
   };
+  reason?: 'refresh-failed' | 'signed-out' | 'expired';
 };
 
 const roleCards = [
@@ -54,26 +56,76 @@ const roleCards = [
   },
 ];
 
+function renderSessionBanner(reason: LocationState['reason'] | null, authStatus: string) {
+  if (authStatus === 'authenticating') {
+    return (
+      <Alert className="border-cyan-200 bg-cyan-50 text-cyan-950" data-testid="authenticating-banner">
+        <Activity className="size-4" />
+        <AlertTitle>Authenticating</AlertTitle>
+        <AlertDescription>
+          Waiting for the session boundary to confirm your credentials.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (reason === 'refresh-failed') {
+    return (
+      <Alert className="border-amber-300/40 bg-amber-50 text-amber-950" data-testid="refresh-required-banner">
+        <TriangleAlert className="size-4" />
+        <AlertTitle>Refresh failed</AlertTitle>
+        <AlertDescription>
+          Session recovery failed. Sign in again before opening protected workflows.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (reason === 'expired') {
+    return (
+      <Alert className="border-amber-300/40 bg-amber-50 text-amber-950" data-testid="session-expired-banner">
+        <TriangleAlert className="size-4" />
+        <AlertTitle>Session expired</AlertTitle>
+        <AlertDescription>
+          Your previous access token expired. Sign in again to continue safely.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  return (
+    <Alert className="border-cyan-200 bg-cyan-50 text-cyan-950" data-testid="signed-out-banner">
+      <ShieldAlert className="size-4" />
+      <AlertTitle>Signed out</AlertTitle>
+      <AlertDescription>Sign in with a valid staff account to continue.</AlertDescription>
+    </Alert>
+  );
+}
+
 export function LoginPage() {
-  const { authStatus, login, session } = useAuth();
+  const { authStatus, login, session, sessionNotice } = useAuth();
 
   const navigate = useNavigate();
   const location = useLocation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
 
   if (session) {
     return <Navigate replace to={resolveHomePath(session.role)} />;
   }
 
-  const nextPath = (location.state as LocationState | null)?.from?.pathname;
+  const locationState = (location.state as LocationState | null) ?? null;
+  const nextPath = locationState?.from?.pathname;
+  const reason = locationState?.reason ?? sessionNotice;
+  const isSubmitting = authStatus === 'authenticating';
+  const sessionBanner = renderSessionBanner(reason, authStatus);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
-    setIsSubmitting(true);
+    setErrorCode(null);
 
     try {
       const nextSession = await login(username.trim(), password);
@@ -81,16 +133,21 @@ export function LoginPage() {
     } catch (error) {
       if (error instanceof ApiError) {
         setErrorMessage(error.message);
+        setErrorCode(error.code);
       } else {
         setErrorMessage('Unable to sign in right now.');
+        setErrorCode('UNKNOWN_ERROR');
       }
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
   return (
-    <div className="medical-shell min-h-screen px-4 py-6 sm:px-6 lg:px-8" data-testid="login-page">
+    <div
+      className="medical-shell min-h-screen px-4 py-6 sm:px-6 lg:px-8"
+      data-auth-status={authStatus}
+      data-session-notice={reason ?? 'none'}
+      data-testid="login-page"
+    >
       <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-7xl gap-5 xl:grid-cols-[minmax(0,1.25fr)_440px]">
         <section className="dashboard-card overflow-hidden p-0">
           <div className="flex h-[70px] items-center justify-between border-b border-border px-7">
@@ -173,11 +230,13 @@ export function LoginPage() {
               </CardTitle>
               <CardDescription className="leading-7">
                 admin / reception / doctor all currently default to <code>secret123</code> in the
-                backend scaffold.
+                Node backend scaffold.
               </CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            {sessionBanner}
+
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="username">
@@ -186,6 +245,7 @@ export function LoginPage() {
                 <Input
                   autoComplete="username"
                   className="h-11 rounded-lg"
+                  data-testid="username-input"
                   id="username"
                   name="username"
                   onChange={(event) => setUsername(event.target.value)}
@@ -201,6 +261,7 @@ export function LoginPage() {
                 <Input
                   autoComplete="current-password"
                   className="h-11 rounded-lg"
+                  data-testid="password-input"
                   id="password"
                   name="password"
                   onChange={(event) => setPassword(event.target.value)}
@@ -210,18 +271,8 @@ export function LoginPage() {
                 />
               </div>
 
-              {authStatus === 'refresh-failed' ? (
-                <Alert className="border-amber-300/40 bg-amber-50 text-amber-950" data-testid="refresh-required-banner">
-                  <TriangleAlert className="size-4" />
-                  <AlertTitle>Refresh failed</AlertTitle>
-                  <AlertDescription>
-                    Session refresh failed. Sign in again to continue safely.
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-
               {errorMessage ? (
-                <Alert data-testid="login-error-banner" variant="destructive">
+                <Alert data-error-code={errorCode ?? 'UNKNOWN_ERROR'} data-testid="login-error-banner" variant="destructive">
                   <TriangleAlert className="size-4" />
                   <AlertTitle>Sign-in failed</AlertTitle>
                   <AlertDescription>{errorMessage}</AlertDescription>
@@ -229,7 +280,9 @@ export function LoginPage() {
               ) : null}
 
               <Button
+                aria-busy={isSubmitting}
                 className="brand-button h-11 w-full rounded-lg"
+                data-testid="login-submit-button"
                 disabled={isSubmitting}
                 type="submit"
               >

@@ -1,7 +1,27 @@
 import { useState } from 'react';
+import {
+  Activity,
+  ArrowRight,
+  CalendarClock,
+  ShieldCheck,
+  Stethoscope,
+  TriangleAlert,
+} from 'lucide-react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 
-import { ApiError } from '@/api';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { ApiError } from '@/lib/api/client';
 
 import { resolveHomePath } from '../index';
 import { useAuth } from '../hooks/use-auth';
@@ -14,17 +34,20 @@ type LocationState = {
 
 const roleCards = [
   {
-    copy: 'Reserved for staffing, access boundaries, and department controls once admin APIs land.',
+    copy: 'Reserved for staffing boundaries, department controls, and admin-only settings.',
+    icon: ShieldCheck,
     label: 'Admin',
     title: 'Configuration shell',
   },
   {
-    copy: 'Prepared for patient registration and appointment booking without speculative fields.',
+    copy: 'Prepared for patient intake and appointment booking without speculative fields.',
+    icon: CalendarClock,
     label: 'Reception',
     title: 'Scheduling workspace',
   },
   {
-    copy: 'Prepared for live queue polling, refresh recovery, and consultation status flow.',
+    copy: 'Prepared for live queue polling, refresh recovery, and consultation progression.',
+    icon: Stethoscope,
     label: 'Doctor',
     title: 'Queue workspace',
   },
@@ -67,121 +90,135 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-7xl overflow-hidden rounded-[2rem] border border-white/70 bg-white/65 shadow-[var(--shadow-panel)] backdrop-blur xl:grid-cols-[minmax(0,1.2fr)_420px]">
-        <section className="relative overflow-hidden bg-slate-950 px-6 py-8 text-white sm:px-8 sm:py-10 lg:px-10 lg:py-12">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(47,111,237,0.35),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.18),transparent_28%)]" />
-          <div className="relative flex h-full flex-col justify-between gap-10">
-            <div>
-              <div className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-200">
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-7xl gap-6 xl:grid-cols-[minmax(0,1.2fr)_420px]">
+        <Card className="relative overflow-hidden border-primary/10 bg-slate-950 text-slate-50 shadow-xl">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.28),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(20,184,166,0.2),transparent_28%)]" />
+          <CardHeader className="relative gap-6 p-6 sm:p-8 lg:p-10">
+            <div className="space-y-4">
+              <Badge className="w-fit bg-white/10 text-white hover:bg-white/10" variant="outline">
                 OPD frontline
+              </Badge>
+              <div className="space-y-3">
+                <CardTitle className="text-balance text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+                  Hospital Management UI runtime
+                </CardTitle>
+                <CardDescription className="max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">
+                  Sign in with current staff accounts to verify role-aware routing, guarded access,
+                  and fail-closed authentication before the operational modules expand.
+                </CardDescription>
               </div>
-              <h1 className="mt-6 max-w-2xl text-balance text-4xl font-extrabold tracking-tight sm:text-5xl">
-                Hospital Management UI runtime
-              </h1>
-              <p className="mt-5 max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">
-                Sign in with the seeded staff accounts to verify role-aware navigation, guarded
-                routes, and fail-closed authentication behaviour before operational modules land.
-              </p>
             </div>
+          </CardHeader>
+          <CardContent className="relative grid gap-4 px-6 pb-6 sm:px-8 sm:pb-8 lg:grid-cols-3 lg:px-10 lg:pb-10">
+            {roleCards.map((card) => {
+              const Icon = card.icon;
 
-            <div className="grid gap-4 lg:grid-cols-3">
-              {roleCards.map((card) => (
-                <article
-                  key={card.label}
-                  className="rounded-[1.75rem] border border-white/12 bg-white/8 p-5 shadow-2xl shadow-slate-950/20 backdrop-blur"
-                >
-                  <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-100">
-                    {card.label}
-                  </p>
-                  <strong className="mt-3 block text-lg font-bold tracking-tight text-white">
-                    {card.title}
-                  </strong>
-                  <p className="mt-3 text-sm leading-6 text-slate-300">{card.copy}</p>
-                </article>
-              ))}
+              return (
+                <Card key={card.label} className="border-white/10 bg-white/8 text-white shadow-none backdrop-blur">
+                  <CardHeader className="gap-3">
+                    <div className="flex size-10 items-center justify-center rounded-lg border border-white/10 bg-white/10 text-white">
+                      <Icon className="size-4" />
+                    </div>
+                    <div className="space-y-2">
+                      <Badge className="w-fit border-white/15 text-white" variant="outline">
+                        {card.label}
+                      </Badge>
+                      <CardTitle className="text-lg text-white">{card.title}</CardTitle>
+                      <CardDescription className="text-sm leading-6 text-slate-300">
+                        {card.copy}
+                      </CardDescription>
+                    </div>
+                  </CardHeader>
+                </Card>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        <Card className="justify-center border-border/70 bg-background/90 shadow-lg">
+          <CardHeader className="space-y-3">
+            <Badge variant="secondary">Sign in</Badge>
+            <div className="space-y-2">
+              <CardTitle className="text-3xl">Use current seeded backend accounts</CardTitle>
+              <CardDescription className="leading-7">
+                admin / reception / doctor — all currently default to <code>secret123</code> in
+                the backend scaffold.
+              </CardDescription>
             </div>
-          </div>
-        </section>
-
-        <section className="flex items-center bg-white/85 px-5 py-8 sm:px-7 lg:px-8">
-          <div className="w-full space-y-6">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-brand-600">
-                Sign in
-              </p>
-              <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900">
-                Use current seeded backend accounts
-              </h2>
-              <p className="mt-3 text-sm leading-7 text-slate-600">
-                admin / reception / doctor — all default to <code>secret123</code> in the current
-                backend scaffold.
-              </p>
-            </div>
-
+          </CardHeader>
+          <CardContent className="space-y-6">
             <form className="space-y-4" onSubmit={handleSubmit}>
-              <label className="block space-y-2">
-                <span className="text-sm font-semibold text-slate-800">Username</span>
-                <input
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="username">
+                  Username
+                </label>
+                <Input
                   autoComplete="username"
-                  className="min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-400 focus:ring-4 focus:ring-brand-100"
+                  id="username"
                   name="username"
                   onChange={(event) => setUsername(event.target.value)}
                   required
                   value={username}
                 />
-              </label>
+              </div>
 
-              <label className="block space-y-2">
-                <span className="text-sm font-semibold text-slate-800">Password</span>
-                <input
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="password">
+                  Password
+                </label>
+                <Input
                   autoComplete="current-password"
-                  className="min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-400 focus:ring-4 focus:ring-brand-100"
+                  id="password"
                   name="password"
                   onChange={(event) => setPassword(event.target.value)}
                   required
                   type="password"
                   value={password}
                 />
-              </label>
+              </div>
 
               {authStatus === 'refresh-failed' ? (
-                <p
-                  className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800"
-                  data-testid="refresh-required-banner"
-                >
-                  Session refresh failed. Sign in again to continue.
-                </p>
+                <Alert className="border-amber-300/40 bg-amber-50 text-amber-950" data-testid="refresh-required-banner">
+                  <TriangleAlert className="size-4" />
+                  <AlertTitle>Refresh failed</AlertTitle>
+                  <AlertDescription>
+                    Session refresh failed. Sign in again to continue safely.
+                  </AlertDescription>
+                </Alert>
               ) : null}
 
               {errorMessage ? (
-                <p
-                  className="rounded-2xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm font-medium text-danger-700"
-                  data-testid="login-error-banner"
-                >
-                  {errorMessage}
-                </p>
+                <Alert data-testid="login-error-banner" variant="destructive">
+                  <TriangleAlert className="size-4" />
+                  <AlertTitle>Sign-in failed</AlertTitle>
+                  <AlertDescription>{errorMessage}</AlertDescription>
+                </Alert>
               ) : null}
 
-              <button
-                className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-gradient-to-r from-brand-600 to-mint-500 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-brand-200/60 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-200/70 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-100 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
-                disabled={isSubmitting}
-                type="submit"
-              >
+              <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
                 {isSubmitting ? 'Signing in…' : 'Sign in'}
-              </button>
+                <ArrowRight className="size-4" />
+              </Button>
             </form>
 
-            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4">
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">
-                Verification note
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                This screen is intentionally explicit: if session recovery fails, the UI surfaces
-                it instead of pretending operational access is still safe.
-              </p>
+            <Separator />
+
+            <div className="rounded-lg border border-border/70 bg-muted/30 p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex size-8 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <Activity className="size-4" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Fail-closed verification note</p>
+                  <p className="text-muted-foreground text-sm leading-6">
+                    If session recovery fails, the UI surfaces the problem instead of pretending
+                    operational access is still safe.
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

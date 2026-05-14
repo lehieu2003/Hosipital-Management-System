@@ -6,9 +6,8 @@ import {
   type PropsWithChildren,
 } from 'react';
 
-import { ApiError, type ApiErrorCode } from '@/api';
+import { ApiError, type ApiErrorCode } from '@/lib/api/client';
 import { appEnv } from '@/lib/config';
-
 import {
   AuthContext,
   normalizeRole,
@@ -19,7 +18,7 @@ import {
   type AuthSuccessEnvelope,
   type MeSuccessEnvelope,
   type UserSession,
-} from '../hooks/use-auth';
+} from '@/lib/auth/session';
 
 function isRefreshFailureCode(code: ApiErrorCode) {
   return code === 'REFRESH_FAILED' || code === 'AUTH_EXPIRED';
@@ -285,11 +284,19 @@ async function toApiErrorFromResponse(response: Response) {
     }
 
     if (response.status === 403) {
-      return new ApiError(payload.error?.message ?? 'Access forbidden', response.status, 'FORBIDDEN');
+      return new ApiError(
+        payload.error?.message ?? 'Access forbidden',
+        response.status,
+        'FORBIDDEN',
+      );
     }
 
     if (response.status === 409) {
-      return new ApiError(payload.error?.message ?? 'Conflict detected', response.status, 'CONFLICT');
+      return new ApiError(
+        payload.error?.message ?? 'Conflict detected',
+        response.status,
+        'CONFLICT',
+      );
     }
 
     if (response.status >= 500) {

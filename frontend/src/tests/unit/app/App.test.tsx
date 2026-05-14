@@ -37,7 +37,7 @@ describe('App scaffold', () => {
     expect(
       screen.getByRole('heading', { name: 'Hospital Management UI runtime' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 
   it('should redirect anonymous users from the home route to login', () => {

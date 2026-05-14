@@ -9,7 +9,7 @@ export {
   type UserSession,
   normalizeRole,
   useAuth,
-} from './hooks/use-auth';
+} from '@/lib/auth/session';
 
 export function resolveHomePath(role: 'admin' | 'doctor' | 'receptionist') {
   if (role === 'doctor') {

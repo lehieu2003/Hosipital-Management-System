@@ -1,4 +1,4 @@
-import { createApiClient } from '@/api';
+import { createApiClient } from '@/lib/api/client';
 
 export type LoginRequest = {
   password: string;

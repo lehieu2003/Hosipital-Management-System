@@ -1,48 +1,75 @@
+import { Activity, RefreshCw, ShieldBan } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+
 const queueNotes = [
   {
     copy: 'Awaiting appointment queue endpoints before wiring live patient cards and timeline state.',
+    icon: Activity,
     title: 'Current scope',
   },
   {
     copy: 'Refresh on interval and focus, replay once after token refresh, then fail closed on unavailable state.',
+    icon: RefreshCw,
     title: 'Required later behavior',
   },
   {
-    copy: 'The card rhythm and side spacing are set up for queue priority, patient details, and action buttons.',
+    copy: 'The card rhythm and spacing are set up for queue priority, patient details, and action buttons.',
+    icon: ShieldBan,
     title: 'Visual contract',
   },
-]
+];
 
 export function QueuePage() {
   return (
     <section className="space-y-6">
-      <div className="rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-[var(--shadow-panel)] backdrop-blur sm:p-8">
-        <p className="text-xs font-bold uppercase tracking-[0.28em] text-brand-600">Doctor</p>
-        <h1 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-          Queue shell
-        </h1>
-        <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
-          Queue polling and appointment progression land next. This page preserves the route,
-          navigation, and clinical workspace proportions now so later live data can drop in cleanly.
-        </p>
-      </div>
+      <Card className="border-primary/10 bg-background/90 shadow-sm">
+        <CardHeader className="gap-3">
+          <Badge variant="secondary">Doctor</Badge>
+          <div className="space-y-2">
+            <CardTitle className="text-balance text-3xl">Queue shell</CardTitle>
+            <CardDescription className="max-w-3xl text-base leading-7">
+              Queue polling and appointment progression land next. This page keeps the route,
+              navigation, and workspace proportions stable so live data can drop in cleanly.
+            </CardDescription>
+          </div>
+        </CardHeader>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        {queueNotes.map((note, index) => (
-          <article
-            key={note.title}
-            className="rounded-[1.75rem] border border-slate-200 bg-white/90 p-6 shadow-[var(--shadow-soft)]"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-50 to-mint-50 text-sm font-bold text-brand-700">
-              0{index + 1}
-            </div>
-            <strong className="mt-4 block text-xl font-bold tracking-tight text-slate-900">
-              {note.title}
-            </strong>
-            <p className="mt-3 text-sm leading-6 text-slate-600">{note.copy}</p>
-          </article>
-        ))}
+        {queueNotes.map((note, index) => {
+          const Icon = note.icon;
+
+          return (
+            <Card key={note.title} className="border-border/70 bg-card/95 shadow-sm">
+              <CardHeader className="gap-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Icon className="size-5" />
+                  </div>
+                  <Badge variant="outline">0{index + 1}</Badge>
+                </div>
+                <div className="space-y-2">
+                  <CardTitle className="text-xl">{note.title}</CardTitle>
+                  <CardDescription className="text-sm leading-6">{note.copy}</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3 text-sm text-muted-foreground">
+                  Future queue rows, status controls, and refresh diagnostics render here.
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </section>
-  )
+  );
 }

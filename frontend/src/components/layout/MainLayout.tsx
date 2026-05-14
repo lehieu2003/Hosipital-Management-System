@@ -1,22 +1,43 @@
+import { Activity, CalendarClock, LayoutDashboard, LogOut, ShieldCheck } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 import { useAuth, type UserRole } from '@/features/auth';
 
-const navItems: Array<{ description: string; label: string; roles: UserRole[]; to: string }> = [
+const navItems: Array<{
+  description: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  roles: UserRole[];
+  to: string;
+}> = [
   {
     description: 'Access and workforce controls',
+    icon: ShieldCheck,
     label: 'Admin',
     roles: ['admin'],
     to: '/admin',
   },
   {
     description: 'Appointments and patient intake',
+    icon: CalendarClock,
     label: 'Scheduling',
     roles: ['receptionist', 'admin'],
     to: '/reception/scheduling',
   },
   {
     description: 'Live consultation queue view',
+    icon: Activity,
     label: 'Doctor queue',
     roles: ['doctor', 'admin'],
     to: '/doctor/queue',
@@ -24,89 +45,101 @@ const navItems: Array<{ description: string; label: string; roles: UserRole[]; t
 ];
 
 function navLinkClass(isActive: boolean) {
-  return [
-    'group rounded-[1.4rem] border px-4 py-3 transition duration-200',
+  return cn(
+    'flex items-start gap-3 rounded-lg border px-3 py-3 text-sm transition-colors',
     isActive
-      ? 'border-brand-200 bg-gradient-to-r from-brand-50 to-mint-50 text-slate-900 shadow-sm'
-      : 'border-transparent bg-white/40 text-slate-600 hover:border-slate-200 hover:bg-white/80 hover:text-slate-900',
-  ].join(' ');
+      ? 'border-primary/20 bg-primary/5 text-foreground shadow-sm'
+      : 'border-transparent text-muted-foreground hover:border-border hover:bg-accent/40 hover:text-foreground',
+  );
 }
 
 export function MainLayout() {
   const { session, logout, authStatus } = useAuth();
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[320px_minmax(0,1fr)]">
-      <aside className="border-b border-white/70 bg-white/80 px-4 py-5 backdrop-blur lg:min-h-screen lg:border-r lg:border-b-0 lg:px-6 lg:py-6">
-        <div className="mx-auto flex h-full w-full max-w-5xl flex-col gap-6 lg:max-w-none">
-          <div className="rounded-[2rem] border border-slate-200/80 bg-white/90 p-5 shadow-[var(--shadow-soft)]">
-            <div className="flex items-start gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-mint-500 text-lg font-extrabold text-white shadow-lg shadow-brand-200/60">
-                HM
+    <div className="min-h-screen bg-transparent lg:grid lg:grid-cols-[300px_minmax(0,1fr)]">
+      <aside className="border-b border-border/70 bg-sidebar/80 backdrop-blur lg:min-h-screen lg:border-r lg:border-b-0">
+        <div className="flex h-full flex-col gap-5 px-4 py-4 lg:px-5 lg:py-5">
+          <Card className="border-primary/10 bg-background/90 shadow-sm">
+            <CardHeader className="gap-4">
+              <div className="flex items-center gap-4">
+                <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+                  <LayoutDashboard className="size-5" />
+                </div>
+                <div className="space-y-1">
+                  <Badge variant="secondary">OPD console</Badge>
+                  <CardTitle className="text-lg">Hospital Management</CardTitle>
+                  <CardDescription>
+                    Role-aware frontend shell with fail-closed authentication states.
+                  </CardDescription>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-[0.28em] text-brand-600">
-                  OPD console
-                </p>
-                <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">
-                  Hospital Management
-                </h1>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Clinical light-theme shell with role-aware navigation and fail-closed auth cues.
-                </p>
-              </div>
-            </div>
-          </div>
+            </CardHeader>
+          </Card>
 
-          <nav className="grid gap-2" aria-label="Primary navigation">
+          <nav aria-label="Primary navigation" className="grid gap-2">
             {navItems
               .filter((item) => session && item.roles.includes(session.role))
-              .map((item) => (
-                <NavLink
-                  key={item.to}
-                  className={({ isActive }) => navLinkClass(isActive)}
-                  to={item.to}
-                >
-                  <span className="block text-sm font-semibold tracking-tight">{item.label}</span>
-                  <span className="mt-1 block text-xs leading-5 text-slate-500 transition group-hover:text-slate-600">
-                    {item.description}
-                  </span>
-                </NavLink>
-              ))}
+              .map((item) => {
+                const Icon = item.icon;
+
+                return (
+                  <NavLink key={item.to} className={({ isActive }) => navLinkClass(isActive)} to={item.to}>
+                    {({ isActive }) => (
+                      <>
+                        <div
+                          className={cn(
+                            'mt-0.5 rounded-md border p-2',
+                            isActive
+                              ? 'border-primary/20 bg-primary/10 text-primary'
+                              : 'border-border/70 bg-background text-muted-foreground',
+                          )}
+                        >
+                          <Icon className="size-4" />
+                        </div>
+                        <div className="min-w-0 space-y-1">
+                          <p className="font-medium text-foreground">{item.label}</p>
+                          <p className="text-xs leading-5 text-muted-foreground">{item.description}</p>
+                        </div>
+                      </>
+                    )}
+                  </NavLink>
+                );
+              })}
           </nav>
 
-          <div className="mt-auto rounded-[2rem] border border-slate-200 bg-slate-950 px-5 py-5 text-white shadow-[var(--shadow-soft)]">
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-300">
-              Active session
-            </p>
-            <div className="mt-3 space-y-1">
-              <p className="text-lg font-bold tracking-tight">
-                {session?.username ?? 'anonymous'}
-              </p>
-              <p className="text-sm text-slate-300">Role: {session?.role ?? 'none'}</p>
-            </div>
-
-            <button
-              className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-              onClick={() => void logout()}
-              type="button"
-            >
-              Sign out
-            </button>
-
-            {authStatus === 'refresh-failed' ? (
-              <p
-                className="mt-4 rounded-2xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm font-medium text-danger-700"
-                data-testid="refresh-failed-banner"
-              >
-                Session refresh failed. Sign in again.
-              </p>
-            ) : null}
+          <div className="mt-auto space-y-4">
+            <Separator />
+            <Card className="border-border/70 bg-slate-950 text-slate-50">
+              <CardHeader className="gap-2">
+                <Badge className="w-fit" variant="outline">Active session</Badge>
+                <CardTitle className="text-base text-white">
+                  {session?.username ?? 'anonymous'}
+                </CardTitle>
+                <CardDescription className="text-slate-300">
+                  Role: {session?.role ?? 'none'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button className="w-full justify-center" onClick={() => void logout()} variant="secondary">
+                  <LogOut className="size-4" />
+                  Sign out
+                </Button>
+                {authStatus === 'refresh-failed' ? (
+                  <p
+                    className="rounded-md border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100"
+                    data-testid="refresh-failed-banner"
+                  >
+                    Session refresh failed. Sign in again.
+                  </p>
+                ) : null}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </aside>
 
-      <main className="px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
+      <main className="px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
         <div className="mx-auto w-full max-w-6xl">
           <Outlet />
         </div>

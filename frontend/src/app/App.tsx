@@ -1,5 +1,14 @@
+import { ShieldCheck, Workflow, Wrench } from 'lucide-react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
+import { Badge } from '@/components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { SchedulingPage } from '@/features/appointments/SchedulingPage';
 import { LoginPage, ProtectedRoute, resolveHomePath, useAuth } from '@/features/auth';
@@ -15,54 +24,70 @@ function HomeRedirect() {
   return <Navigate replace to={resolveHomePath(session.role)} />;
 }
 
+const adminCards = [
+  {
+    copy: 'Navigation, auth gating, and sign-out state are live now. Operational forms stay disabled until the backend contract exists.',
+    icon: ShieldCheck,
+    label: 'Current boundary',
+    title: 'Role-aware shell only',
+  },
+  {
+    copy: 'Protected admin screens should refuse to imply access or success when session state or downstream configuration is incomplete.',
+    icon: Workflow,
+    label: 'Safety rule',
+    title: 'Fail closed on uncertainty',
+  },
+  {
+    copy: 'Once the backend exposes staffing endpoints, this space can absorb configuration forms without another visual rewrite.',
+    icon: Wrench,
+    label: 'Next integration',
+    title: 'User and roster setup',
+  },
+];
+
 function AdminPage() {
   return (
     <section className="space-y-6">
-      <div className="rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-[var(--shadow-panel)] backdrop-blur sm:p-8">
-        <p className="text-xs font-bold uppercase tracking-[0.28em] text-brand-600">Admin</p>
-        <h1 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-          Administration shell
-        </h1>
-        <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
-          Department setup, user administration, and doctor assignment controls are the next
-          admin-facing layer. This shell keeps the protected route contract and the visual
-          system stable while those workflows land.
-        </p>
-      </div>
+      <Card className="border-primary/10 bg-background/90 shadow-sm">
+        <CardHeader className="gap-3">
+          <Badge variant="secondary">Admin</Badge>
+          <div className="space-y-2">
+            <CardTitle className="text-balance text-3xl">Administration shell</CardTitle>
+            <CardDescription className="max-w-3xl text-base leading-7">
+              Department setup, user administration, and doctor assignment controls are the next
+              admin-facing layer. This shell keeps the protected route contract and visual system
+              stable while those workflows land.
+            </CardDescription>
+          </div>
+        </CardHeader>
+      </Card>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <article className="rounded-[1.75rem] border border-slate-200 bg-white/90 p-6 shadow-[var(--shadow-soft)]">
-          <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-600">
-            Current boundary
-          </p>
-          <h2 className="mt-3 text-xl font-bold text-slate-900">Role-aware shell only</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Navigation, auth gating, and sign-out state are live now. Operational forms stay
-            disabled until the backend contract exists.
-          </p>
-        </article>
+        {adminCards.map((card) => {
+          const Icon = card.icon;
 
-        <article className="rounded-[1.75rem] border border-slate-200 bg-white/90 p-6 shadow-[var(--shadow-soft)]">
-          <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-600">
-            Safety rule
-          </p>
-          <h2 className="mt-3 text-xl font-bold text-slate-900">Fail closed on uncertainty</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Protected admin screens should refuse to imply access or success when session state
-            or downstream configuration is incomplete.
-          </p>
-        </article>
-
-        <article className="rounded-[1.75rem] border border-slate-200 bg-white/90 p-6 shadow-[var(--shadow-soft)]">
-          <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-600">
-            Next integration
-          </p>
-          <h2 className="mt-3 text-xl font-bold text-slate-900">User and roster setup</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Once the backend exposes staffing endpoints, this space can absorb configuration
-            forms without needing another visual rewrite.
-          </p>
-        </article>
+          return (
+            <Card key={card.title} className="border-border/70 bg-card/95 shadow-sm">
+              <CardHeader className="gap-4">
+                <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Icon className="size-5" />
+                </div>
+                <div className="space-y-2">
+                  <Badge className="w-fit" variant="outline">
+                    {card.label}
+                  </Badge>
+                  <CardTitle className="text-xl">{card.title}</CardTitle>
+                  <CardDescription className="text-sm leading-6">{card.copy}</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3 text-sm text-muted-foreground">
+                  Reserved for future admin controls that are backed by a real API contract.
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </section>
   );

@@ -3,6 +3,7 @@ import {
   Activity,
   ArrowRight,
   CalendarClock,
+  GalleryVerticalEnd,
   ShieldCheck,
   Stethoscope,
   TriangleAlert,
@@ -34,22 +35,22 @@ type LocationState = {
 
 const roleCards = [
   {
-    copy: 'Reserved for staffing boundaries, department controls, and admin-only settings.',
+    copy: 'Staffing boundaries, department controls, and admin-only settings.',
     icon: ShieldCheck,
     label: 'Admin',
-    title: 'Configuration shell',
+    metric: '98.2%',
   },
   {
-    copy: 'Prepared for patient intake and appointment booking without speculative fields.',
+    copy: 'Patient intake, appointment booking, and slot availability.',
     icon: CalendarClock,
     label: 'Reception',
-    title: 'Scheduling workspace',
+    metric: '312',
   },
   {
-    copy: 'Prepared for live queue polling, refresh recovery, and consultation progression.',
+    copy: 'Live queue polling, refresh recovery, and consultations.',
     icon: Stethoscope,
     label: 'Doctor',
-    title: 'Queue workspace',
+    metric: '42',
   },
 ];
 
@@ -89,60 +90,90 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-7xl gap-6 xl:grid-cols-[minmax(0,1.2fr)_420px]">
-        <Card className="relative overflow-hidden border-primary/10 bg-slate-950 text-slate-50 shadow-xl">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.28),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(20,184,166,0.2),transparent_28%)]" />
-          <CardHeader className="relative gap-6 p-6 sm:p-8 lg:p-10">
-            <div className="space-y-4">
-              <Badge className="w-fit bg-white/10 text-white hover:bg-white/10" variant="outline">
-                OPD frontline
-              </Badge>
-              <div className="space-y-3">
-                <CardTitle className="text-balance text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+    <div className="medical-shell min-h-screen px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-7xl gap-5 xl:grid-cols-[minmax(0,1.25fr)_440px]">
+        <section className="dashboard-card overflow-hidden p-0">
+          <div className="flex h-[70px] items-center justify-between border-b border-border px-7">
+            <div className="flex items-center gap-3">
+              <div className="brand-mark flex size-9 items-center justify-center rounded-xl">
+                <GalleryVerticalEnd className="size-5" />
+              </div>
+              <span className="text-base font-bold tracking-tight text-slate-950">MediCore HMS</span>
+            </div>
+            <Badge className="brand-soft rounded-lg" variant="secondary">
+              OPD frontline
+            </Badge>
+          </div>
+
+          <div className="grid gap-6 p-7 lg:grid-cols-[1fr_0.75fr] lg:p-10">
+            <div className="space-y-8">
+              <div className="max-w-3xl space-y-4">
+                <h1 className="text-balance text-5xl font-bold tracking-[-0.06em] text-slate-950">
                   Hospital Management UI runtime
-                </CardTitle>
-                <CardDescription className="max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">
+                </h1>
+                <p className="text-pretty max-w-2xl text-lg leading-8 text-muted-foreground">
                   Sign in with current staff accounts to verify role-aware routing, guarded access,
-                  and fail-closed authentication before the operational modules expand.
-                </CardDescription>
+                  and fail-closed authentication before operational modules expand.
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                {roleCards.map((card) => {
+                  const Icon = card.icon;
+
+                  return (
+                    <div key={card.label} className="rounded-2xl border border-cyan-100 bg-white p-5 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex size-10 items-center justify-center rounded-xl bg-cyan-50 text-cyan-700">
+                          <Icon className="size-4" />
+                        </div>
+                        <p className="tabular text-2xl font-bold tracking-[-0.05em] text-cyan-700">{card.metric}</p>
+                      </div>
+                      <p className="mt-5 font-semibold">{card.label}</p>
+                      <p className="text-pretty mt-2 text-sm leading-6 text-muted-foreground">{card.copy}</p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="relative grid gap-4 px-6 pb-6 sm:px-8 sm:pb-8 lg:grid-cols-3 lg:px-10 lg:pb-10">
-            {roleCards.map((card) => {
-              const Icon = card.icon;
 
-              return (
-                <Card key={card.label} className="border-white/10 bg-white/8 text-white shadow-none backdrop-blur">
-                  <CardHeader className="gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-lg border border-white/10 bg-white/10 text-white">
-                      <Icon className="size-4" />
+            <div className="rounded-2xl border border-cyan-100 bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold">System readiness</p>
+                  <p className="text-sm text-muted-foreground">Authentication boundary</p>
+                </div>
+                <Activity className="size-5 text-muted-foreground" />
+              </div>
+              <div className="mt-8 flex h-[260px] items-end justify-between gap-3">
+                {[58, 76, 62, 84, 48, 71, 54].map((height, index) => (
+                  <div key={`${height}-${index}`} className="flex flex-1 flex-col items-center gap-3">
+                    <div className="flex h-[210px] w-full items-end">
+                      <div
+                        className="w-full rounded-t-xl rounded-b-lg bg-cyan-600"
+                        style={{ height: `${height}%` }}
+                      />
                     </div>
-                    <div className="space-y-2">
-                      <Badge className="w-fit border-white/15 text-white" variant="outline">
-                        {card.label}
-                      </Badge>
-                      <CardTitle className="text-lg text-white">{card.title}</CardTitle>
-                      <CardDescription className="text-sm leading-6 text-slate-300">
-                        {card.copy}
-                      </CardDescription>
-                    </div>
-                  </CardHeader>
-                </Card>
-              );
-            })}
-          </CardContent>
-        </Card>
+                    <span className="text-xs text-muted-foreground">{index + 1}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
 
-        <Card className="justify-center border-border/70 bg-background/90 shadow-lg">
+        <Card className="dashboard-card justify-center border-border bg-white py-7">
           <CardHeader className="space-y-3">
-            <Badge variant="secondary">Sign in</Badge>
+            <Badge className="rounded-lg" variant="secondary">
+              Sign in
+            </Badge>
             <div className="space-y-2">
-              <CardTitle className="text-3xl">Use current seeded backend accounts</CardTitle>
+              <CardTitle className="text-3xl tracking-[-0.04em]">
+                Use current seeded backend accounts
+              </CardTitle>
               <CardDescription className="leading-7">
-                admin / reception / doctor — all currently default to <code>secret123</code> in
-                the backend scaffold.
+                admin / reception / doctor all currently default to <code>secret123</code> in the
+                backend scaffold.
               </CardDescription>
             </div>
           </CardHeader>
@@ -154,6 +185,7 @@ export function LoginPage() {
                 </label>
                 <Input
                   autoComplete="username"
+                  className="h-11 rounded-lg"
                   id="username"
                   name="username"
                   onChange={(event) => setUsername(event.target.value)}
@@ -168,6 +200,7 @@ export function LoginPage() {
                 </label>
                 <Input
                   autoComplete="current-password"
+                  className="h-11 rounded-lg"
                   id="password"
                   name="password"
                   onChange={(event) => setPassword(event.target.value)}
@@ -195,22 +228,26 @@ export function LoginPage() {
                 </Alert>
               ) : null}
 
-              <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
-                {isSubmitting ? 'Signing in…' : 'Sign in'}
+              <Button
+                className="brand-button h-11 w-full rounded-lg"
+                disabled={isSubmitting}
+                type="submit"
+              >
+                {isSubmitting ? 'Signing in...' : 'Sign in'}
                 <ArrowRight className="size-4" />
               </Button>
             </form>
 
             <Separator />
 
-            <div className="rounded-lg border border-border/70 bg-muted/30 p-4">
+            <div className="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-4">
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex size-8 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <div className="mt-0.5 flex size-9 items-center justify-center rounded-xl bg-white text-cyan-700 shadow-sm">
                   <Activity className="size-4" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium">Fail-closed verification note</p>
-                  <p className="text-muted-foreground text-sm leading-6">
+                  <p className="text-sm font-semibold">Fail-closed verification note</p>
+                  <p className="text-sm leading-6 text-muted-foreground">
                     If session recovery fails, the UI surfaces the problem instead of pretending
                     operational access is still safe.
                   </p>

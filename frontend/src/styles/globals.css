@@ -1,44 +1,44 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 
 :root {
-  --background: oklch(0.984 0.004 236.5);
-  --foreground: oklch(0.244 0.03 255.18);
+  --background: oklch(0.982 0.012 196.4);
+  --foreground: oklch(0.205 0.036 239.5);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.244 0.03 255.18);
+  --card-foreground: oklch(0.205 0.036 239.5);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.244 0.03 255.18);
-  --primary: oklch(0.566 0.199 258.72);
+  --popover-foreground: oklch(0.205 0.036 239.5);
+  --primary: oklch(0.63 0.145 195.5);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.954 0.013 228.38);
-  --secondary-foreground: oklch(0.301 0.034 255.48);
-  --muted: oklch(0.961 0.008 236.28);
-  --muted-foreground: oklch(0.528 0.036 249.73);
-  --accent: oklch(0.95 0.03 174.96);
-  --accent-foreground: oklch(0.33 0.053 196.36);
+  --secondary: oklch(0.957 0.028 190.6);
+  --secondary-foreground: oklch(0.29 0.055 229.7);
+  --muted: oklch(0.956 0.014 205.2);
+  --muted-foreground: oklch(0.49 0.035 230.5);
+  --accent: oklch(0.93 0.045 174.7);
+  --accent-foreground: oklch(0.26 0.062 203.2);
   --destructive: oklch(0.637 0.237 25.331);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.905 0.012 244.89);
-  --input: oklch(0.905 0.012 244.89);
-  --ring: oklch(0.566 0.199 258.72);
-  --chart-1: oklch(0.566 0.199 258.72);
-  --chart-2: oklch(0.673 0.141 174.33);
-  --chart-3: oklch(0.723 0.157 68.49);
-  --chart-4: oklch(0.63 0.201 12.37);
-  --chart-5: oklch(0.53 0.11 242.46);
-  --radius: 1rem;
-  --sidebar: oklch(0.995 0 0);
-  --sidebar-foreground: oklch(0.244 0.03 255.18);
-  --sidebar-primary: oklch(0.566 0.199 258.72);
+  --border: oklch(0.89 0.022 205.5);
+  --input: oklch(0.89 0.022 205.5);
+  --ring: oklch(0.66 0.13 195.5);
+  --chart-1: oklch(0.6 0.14 198);
+  --chart-2: oklch(0.73 0.13 162);
+  --chart-3: oklch(0.63 0.18 250);
+  --chart-4: oklch(0.74 0.15 70);
+  --chart-5: oklch(0.64 0.19 25);
+  --radius: 0.9rem;
+  --sidebar: oklch(0.99 0.01 197.2);
+  --sidebar-foreground: oklch(0.24 0.039 236.7);
+  --sidebar-primary: oklch(0.63 0.145 195.5);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.961 0.008 236.28);
-  --sidebar-accent-foreground: oklch(0.301 0.034 255.48);
-  --sidebar-border: oklch(0.905 0.012 244.89);
-  --sidebar-ring: oklch(0.566 0.199 258.72);
+  --sidebar-accent: oklch(0.94 0.035 188.6);
+  --sidebar-accent-foreground: oklch(0.26 0.062 203.2);
+  --sidebar-border: oklch(0.89 0.022 205.5);
+  --sidebar-ring: oklch(0.66 0.13 195.5);
 }
 
 @theme inline {
-  --font-sans: 'Manrope', 'Segoe UI', sans-serif;
+  --font-sans: 'Geist', 'Aptos', sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -89,10 +89,10 @@
 
   body {
     @apply min-h-screen bg-background text-foreground antialiased;
-    background-image:
-      radial-gradient(circle at top left, rgb(59 130 246 / 0.14), transparent 28%),
-      radial-gradient(circle at top right, rgb(20 184 166 / 0.12), transparent 24%),
-      linear-gradient(180deg, #fbfdff 0%, #f4f8fc 100%);
+    background:
+      radial-gradient(circle at 16% -8%, rgb(34 211 238 / 0.18), transparent 32%),
+      radial-gradient(circle at 84% 4%, rgb(16 185 129 / 0.14), transparent 30%),
+      linear-gradient(180deg, #f6fdff 0%, #eef9f7 100%);
   }
 
   body,
@@ -130,5 +130,41 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  .dashboard-card {
+    @apply rounded-2xl border border-border bg-card shadow-[0_1px_1px_rgb(6_95_120/0.05),0_14px_34px_rgb(6_95_120/0.07)];
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .medical-shell {
+    background:
+      radial-gradient(circle at 14% -6%, rgb(34 211 238 / 0.2), transparent 30%),
+      radial-gradient(circle at 90% 0%, rgb(52 211 153 / 0.16), transparent 28%),
+      linear-gradient(180deg, #f5fdff 0%, #eef9f7 100%);
+  }
+
+  .brand-mark {
+    @apply text-white shadow-sm;
+    background: linear-gradient(135deg, #0891b2 0%, #14b8a6 52%, #22c55e 100%);
+  }
+
+  .brand-button {
+    @apply bg-cyan-600 text-white shadow-sm hover:bg-cyan-700;
+  }
+
+  .brand-soft {
+    @apply bg-cyan-50 text-cyan-800;
+  }
+
+  .success-pill {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-700;
   }
 }

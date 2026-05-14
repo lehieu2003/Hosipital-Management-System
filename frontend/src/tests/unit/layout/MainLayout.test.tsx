@@ -26,7 +26,7 @@ function buildAuthValue(overrides: Partial<AuthContextValue> = {}): AuthContextV
     },
     login: vi.fn(),
     logout: noopAsync,
-    refresh: vi.fn().mockResolvedValue({ accessToken: 'fresh-token', ...session }),
+    refresh: vi.fn().mockResolvedValue({ ...session, accessToken: 'fresh-token' }),
     ...overrides,
   };
 }

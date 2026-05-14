@@ -13,7 +13,7 @@ describe('readAppEnv', () => {
     expect(
       readAppEnv({
         VITE_API_BASE_URL: '  https://stage.example.test/api/v1  ',
-      } as ImportMetaEnv),
+      } as unknown as ImportMetaEnv),
     ).toEqual({
       apiBaseUrl: 'https://stage.example.test/api/v1',
     });

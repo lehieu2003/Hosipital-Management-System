@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiError, createApiClient, type SessionManager } from '@/lib/api/client';
+import { createApiClient, type SessionManager } from '@/lib/api/client';
 
 describe('createApiClient', () => {
   const fetchMock = vi.fn<typeof fetch>();
@@ -110,7 +110,7 @@ describe('createApiClient', () => {
       sessionManager,
     });
 
-    await expect(client.get('/appointments')).rejects.toMatchObject<ApiError>({
+    await expect(client.get('/appointments')).rejects.toMatchObject({
       code: 'REFRESH_FAILED',
       status: 401,
     });

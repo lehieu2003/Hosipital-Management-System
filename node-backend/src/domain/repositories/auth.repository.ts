@@ -1,6 +1,9 @@
 import { UserRole, type RefreshSession, type User } from '@prisma/client';
 
 import { db } from '../../infrastructure/database/client.js';
+import { ERROR_CODES } from '../../shared/constants/error-codes.js';
+import { AppError } from '../../shared/errors/app-error.js';
+import { logger } from '../../shared/utils/logger.js';
 
 type CreateRefreshSessionInput = {
   tokenJti: string;
@@ -9,68 +12,105 @@ type CreateRefreshSessionInput = {
   expiresAt: Date;
 };
 
+const wrapAuthStoreError = (action: string, error: unknown): never => {
+  if (error instanceof AppError) {
+    throw error;
+  }
+
+  logger.error({ action, error }, 'auth_repository_failed');
+  throw new AppError('Authentication temporarily unavailable', 503, ERROR_CODES.authUnavailable);
+};
+
 class AuthRepository {
-  findUserByUsername(username: string) {
-    return db.user.findUnique({
-      where: { username },
-    });
+  async findUserByUsername(username: string) {
+    try {
+      return await db.user.findUnique({
+        where: { username },
+      });
+    } catch (error) {
+      return wrapAuthStoreError('find_user_by_username', error);
+    }
   }
 
-  findUserById(id: string) {
-    return db.user.findUnique({
-      where: { id },
-    });
+  async findUserById(id: string) {
+    try {
+      return await db.user.findUnique({
+        where: { id },
+      });
+    } catch (error) {
+      return wrapAuthStoreError('find_user_by_id', error);
+    }
   }
 
-  createUser(data: {
+  async createUser(data: {
     username: string;
     passwordHash: string;
     role: UserRole;
     isActive?: boolean;
   }) {
-    return db.user.create({
-      data,
-    });
+    try {
+      return await db.user.create({
+        data,
+      });
+    } catch (error) {
+      return wrapAuthStoreError('create_user', error);
+    }
   }
 
-  createRefreshSession(data: CreateRefreshSessionInput) {
-    return db.refreshSession.create({
-      data,
-    });
+  async createRefreshSession(data: CreateRefreshSessionInput) {
+    try {
+      return await db.refreshSession.create({
+        data,
+      });
+    } catch (error) {
+      return wrapAuthStoreError('create_refresh_session', error);
+    }
   }
 
-  findRefreshSessionByJti(tokenJti: string) {
-    return db.refreshSession.findUnique({
-      where: { tokenJti },
-      include: { user: true },
-    });
+  async findRefreshSessionByJti(tokenJti: string) {
+    try {
+      return await db.refreshSession.findUnique({
+        where: { tokenJti },
+        include: { user: true },
+      });
+    } catch (error) {
+      return wrapAuthStoreError('find_refresh_session_by_jti', error);
+    }
   }
 
-  revokeRefreshSession(tokenJti: string, revokeReason: string, replacedByJti?: string) {
-    return db.refreshSession.updateMany({
-      where: {
-        tokenJti,
-        revokedAt: null,
-      },
-      data: {
-        revokedAt: new Date(),
-        revokeReason,
-        replacedByJti,
-      },
-    });
+  async revokeRefreshSession(tokenJti: string, revokeReason: string, replacedByJti?: string) {
+    try {
+      return await db.refreshSession.updateMany({
+        where: {
+          tokenJti,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+          revokeReason,
+          replacedByJti,
+        },
+      });
+    } catch (error) {
+      return wrapAuthStoreError('revoke_refresh_session', error);
+    }
   }
 
-  revokeAllUserSessions(userId: string, revokeReason: string) {
-    return db.refreshSession.updateMany({
-      where: {
-        userId,
-        revokedAt: null,
-      },
-      data: {
-        revokedAt: new Date(),
-        revokeReason,
-      },
-    });
+  async revokeAllUserSessions(userId: string, revokeReason: string) {
+    try {
+      return await db.refreshSession.updateMany({
+        where: {
+          userId,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+          revokeReason,
+        },
+      });
+    } catch (error) {
+      return wrapAuthStoreError('revoke_all_user_sessions', error);
+    }
   }
 }
 

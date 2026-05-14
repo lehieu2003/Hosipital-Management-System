@@ -10,6 +10,7 @@ import {
   hashToken,
   verifyRefreshToken,
 } from '../../shared/helpers/jwt.helper.js';
+import { logger } from '../../shared/utils/logger.js';
 import { authRepository } from '../repositories/auth.repository.js';
 
 const DEFAULT_SEED_USERS = [
@@ -32,6 +33,8 @@ class AuthService {
         passwordHash,
         role: seed.role,
       });
+
+      logger.info({ username: seed.username, role: seed.role }, 'auth_seed_user_created');
     }
   }
 
@@ -40,11 +43,13 @@ class AuthService {
 
     const user = await authRepository.findUserByUsername(username);
     if (!user || !user.isActive) {
+      logger.warn({ username, reason: 'invalid_credentials' }, 'auth_login_denied');
       throw new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS');
     }
 
     const validPassword = await verifyPassword(password, user.passwordHash);
     if (!validPassword) {
+      logger.warn({ username, reason: 'invalid_credentials' }, 'auth_login_denied');
       throw new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS');
     }
 
@@ -65,6 +70,8 @@ class AuthService {
       expiresAt: refreshExpiresAt,
     });
 
+    logger.info({ userId: user.id, username: user.username, role: user.role }, 'auth_login_succeeded');
+
     return {
       accessToken,
       refreshToken: refresh.token,
@@ -77,7 +84,8 @@ class AuthService {
     const user = await authRepository.findUserById(userId);
 
     if (!user || !user.isActive) {
-      throw new AppError('Unauthorized', 401, 'INVALID_ACCESS_TOKEN');
+      logger.warn({ userId, reason: 'invalid_access_token' }, 'auth_me_denied');
+      throw new AppError('Invalid access token', 401, 'INVALID_ACCESS_TOKEN');
     }
 
     return user;
@@ -89,31 +97,38 @@ class AuthService {
       payload = verifyRefreshToken(refreshToken);
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
+        logger.warn({ reason: 'expired_refresh_token' }, 'auth_refresh_denied');
         throw new AppError('Refresh token expired', 401, 'EXPIRED_REFRESH_TOKEN');
       }
 
+      logger.warn({ reason: 'invalid_refresh_token' }, 'auth_refresh_denied');
       throw new AppError('Invalid refresh token', 401, 'INVALID_REFRESH_TOKEN');
     }
 
     const session = await authRepository.findRefreshSessionByJti(payload.jti);
     if (!session) {
+      logger.warn({ userId: payload.sub, reason: 'refresh_session_missing' }, 'auth_refresh_denied');
       throw new AppError('Refresh token revoked', 401, 'REVOKED_REFRESH_TOKEN');
     }
 
     if (session.revokedAt) {
+      logger.warn({ userId: session.user.id, reason: 'refresh_session_revoked' }, 'auth_refresh_denied');
       throw new AppError('Refresh token revoked', 401, 'REVOKED_REFRESH_TOKEN');
     }
 
     if (session.tokenHash !== hashToken(refreshToken)) {
+      logger.warn({ userId: session.user.id, reason: 'refresh_hash_mismatch' }, 'auth_refresh_denied');
       throw new AppError('Invalid refresh token', 401, 'INVALID_REFRESH_TOKEN');
     }
 
     if (session.expiresAt.getTime() <= Date.now()) {
+      logger.warn({ userId: session.user.id, reason: 'refresh_session_expired' }, 'auth_refresh_denied');
       throw new AppError('Refresh token expired', 401, 'EXPIRED_REFRESH_TOKEN');
     }
 
     if (!session.user.isActive) {
-      throw new AppError('Unauthorized', 401, 'INVALID_REFRESH_TOKEN');
+      logger.warn({ userId: session.user.id, reason: 'user_inactive' }, 'auth_refresh_denied');
+      throw new AppError('Invalid refresh token', 401, 'INVALID_REFRESH_TOKEN');
     }
 
     const accessToken = buildAccessToken({
@@ -132,6 +147,7 @@ class AuthService {
       nextRefresh.jti,
     );
     if (revokeResult.count === 0) {
+      logger.warn({ userId: session.user.id, reason: 'refresh_replay_or_race' }, 'auth_refresh_denied');
       throw new AppError('Refresh token revoked', 401, 'REVOKED_REFRESH_TOKEN');
     }
 
@@ -142,6 +158,8 @@ class AuthService {
       expiresAt: refreshExpiresAt,
     });
 
+    logger.info({ userId: session.user.id, role: session.user.role }, 'auth_refresh_rotated');
+
     return {
       accessToken,
       refreshToken: nextRefresh.token,
@@ -151,14 +169,20 @@ class AuthService {
 
   async logout(refreshToken: string | undefined) {
     if (!refreshToken) {
+      logger.info({ reason: 'missing_refresh_cookie' }, 'auth_logout_skipped');
       return;
     }
 
     try {
       const payload = verifyRefreshToken(refreshToken);
       await authRepository.revokeRefreshSession(payload.jti, 'logout');
-    } catch {
-      return;
+      logger.info({ userId: payload.sub }, 'auth_logout_completed');
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+
+      logger.warn({ reason: 'invalid_refresh_token' }, 'auth_logout_skipped');
     }
   }
 }

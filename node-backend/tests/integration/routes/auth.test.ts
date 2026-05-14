@@ -3,13 +3,21 @@ import request from 'supertest';
 
 import { UserRole } from '@prisma/client';
 
-const { refreshSessionStore, userStore, dbMock } = vi.hoisted(() => {
+const { dbMock, dbState, refreshSessionStore, userStore } = vi.hoisted(() => {
   const refreshSessionStore = new Map<string, any>();
   const userStore = new Map<string, any>();
+  const dbState = {
+    failNextUserLookup: false,
+  };
 
   const dbMock = {
     user: {
       findUnique: async ({ where }: { where: { id?: string; username?: string } }) => {
+        if (dbState.failNextUserLookup) {
+          dbState.failNextUserLookup = false;
+          throw new Error('database unavailable');
+        }
+
         if (where.id) {
           return userStore.get(where.id) ?? null;
         }
@@ -89,7 +97,7 @@ const { refreshSessionStore, userStore, dbMock } = vi.hoisted(() => {
     },
   };
 
-  return { refreshSessionStore, userStore, dbMock };
+  return { dbMock, dbState, refreshSessionStore, userStore };
 });
 
 vi.mock('../../../src/infrastructure/database/client.js', () => ({
@@ -97,9 +105,15 @@ vi.mock('../../../src/infrastructure/database/client.js', () => ({
 }));
 
 import { createApp } from '../../../src/app.js';
+import {
+  redactHeaders,
+  serializeRequestForLogs,
+  serializeResponseForLogs,
+} from '../../../src/shared/utils/logger.js';
 
 describe('auth routes', () => {
   beforeEach(() => {
+    dbState.failNextUserLookup = false;
     refreshSessionStore.clear();
     userStore.clear();
   });
@@ -116,6 +130,9 @@ describe('auth routes', () => {
     expect(loginResponse.body.success).toBe(true);
     expect(loginResponse.body.data.user.role).toBe(UserRole.DOCTOR);
     expect(loginResponse.headers['set-cookie']).toBeDefined();
+    expect(loginResponse.headers['set-cookie'][0]).toContain('HttpOnly');
+    expect(loginResponse.headers['set-cookie'][0]).toContain('SameSite=Lax');
+    expect(loginResponse.headers['set-cookie'][0]).toContain('Path=/api/v1/auth');
 
     const loginCookie = loginResponse.headers['set-cookie'][0];
     const accessToken = loginResponse.body.data.accessToken as string;
@@ -151,7 +168,7 @@ describe('auth routes', () => {
     });
   });
 
-  it('should reject invalid credentials', async () => {
+  it('should reject invalid credentials with deterministic envelope', async () => {
     const app = createApp();
 
     await request(app).post('/api/v1/auth/login').send({
@@ -172,5 +189,100 @@ describe('auth routes', () => {
         message: 'Invalid credentials',
       },
     });
+  });
+
+  it('should reject malformed login payloads with validation details', async () => {
+    const app = createApp();
+
+    const response = await request(app).post('/api/v1/auth/login').send({
+      username: '',
+      password: '',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    expect(response.body.error.message).toBe('Invalid request body');
+    expect(response.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: 'username' }),
+        expect.objectContaining({ path: 'password' }),
+      ]),
+    );
+  });
+
+  it('should reject refresh when the cookie is missing', async () => {
+    const app = createApp();
+
+    const response = await request(app).post('/api/v1/auth/refresh');
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      success: false,
+      error: {
+        code: 'MISSING_REFRESH_TOKEN',
+        message: 'Refresh token is required',
+      },
+    });
+  });
+
+  it('should return auth unavailable when the auth store lookup fails', async () => {
+    const app = createApp();
+    dbState.failNextUserLookup = true;
+
+    const response = await request(app).post('/api/v1/auth/login').send({
+      username: 'doctor',
+      password: 'secret123',
+    });
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      success: false,
+      error: {
+        code: 'AUTH_UNAVAILABLE',
+        message: 'Authentication temporarily unavailable',
+      },
+    });
+  });
+
+  it('should redact bearer and refresh cookies in structured log serializers', () => {
+    const authorization = 'Bearer access-token-value';
+    const refreshCookie = 'refresh_token=refresh-token-value';
+
+    const serializedRequest = serializeRequestForLogs({
+      headers: {
+        authorization,
+        cookie: refreshCookie,
+        host: 'localhost:3000',
+      },
+      method: 'POST',
+      socket: { remoteAddress: '127.0.0.1', remotePort: 3000 },
+      url: '/api/v1/auth/refresh',
+    } as any);
+
+    const response = {
+      getHeaders: () => ({
+        'content-type': 'application/json',
+        'set-cookie': [refreshCookie],
+      }),
+      headersSent: true,
+      statusCode: 200,
+    } as any;
+
+    const serializedResponse = serializeResponseForLogs(response);
+
+    expect(redactHeaders({ authorization, cookie: refreshCookie, 'set-cookie': [refreshCookie] })).toEqual({
+      authorization: '[redacted]',
+      cookie: '[redacted]',
+      'set-cookie': '[redacted]',
+    });
+    expect(serializedRequest).toBeDefined();
+    expect(serializedResponse).toBeDefined();
+    expect(serializedRequest!.headers?.authorization).toBe('[redacted]');
+    expect(serializedRequest!.headers?.cookie).toBe('[redacted]');
+    expect((serializedResponse!.headers as Record<string, unknown>)['set-cookie']).toBe('[redacted]');
+    expect(JSON.stringify(serializedRequest)).not.toContain(authorization);
+    expect(JSON.stringify(serializedRequest)).not.toContain(refreshCookie);
+    expect(JSON.stringify(serializedResponse)).not.toContain(refreshCookie);
   });
 });

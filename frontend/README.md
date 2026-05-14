@@ -133,6 +133,57 @@ npm --prefix frontend run test -- --runInBand src/tests/unit/auth/AuthShell.test
 npm --prefix frontend run test -- --runInBand src/tests/unit/opd/OperationalFoundations.test.tsx
 ```
 
+### S10 live localhost rerun
+
+Use this when you need stage-like proof against the real React frontend plus the live Node auth backend.
+
+Start both runtimes:
+
+```bash
+npm --prefix node-backend run dev
+npm --prefix frontend run dev -- --host 127.0.0.1 --port 5173
+```
+
+Then run the tracked verifier:
+
+```bash
+node frontend/scripts/verify-s10-live.mjs
+```
+
+What the verifier proves before any browser work begins:
+
+- `http://127.0.0.1:5173/` and `/login` are reachable and still serving the Vite HTML shell.
+- `VITE_API_BASE_URL` resolves to the expected local Node auth base URL (or falls back to `http://localhost:3000/api/v1` when unset).
+- `/api/v1/healthz` is healthy.
+- `/api/v1/auth/login` rejects bad credentials with `INVALID_CREDENTIALS`.
+- `/api/v1/auth/login`, `/api/v1/auth/me`, and `/api/v1/auth/refresh` all work for the seeded `doctor` account.
+- Refresh replay is still fail-closed with `REVOKED_REFRESH_TOKEN`.
+
+Seeded live credentials:
+
+| Role | Username | Password | Expected landing route |
+| --- | --- | --- | --- |
+| Admin | `admin` | `secret123` | `/app/admin` |
+| Receptionist | `reception` | `secret123` | `/app/reception/scheduling` |
+| Doctor | `doctor` | `secret123` | `/app/doctor/queue` |
+
+Browser rerun matrix after the script passes:
+
+| Flow | Route / action | Required assertions |
+| --- | --- | --- |
+| Login boundary | `/login` | `data-testid="login-page"` is visible and the seeded-account copy is present. |
+| Admin auth shell | login as `admin` | `data-testid="app-shell"`, `data-role="admin"`, `data-auth-status="authenticated"`, `data-testid="admin-overview-unavailable-state"`, `data-screen-code="CONTRACT_PENDING"`, `data-screen-status="unavailable"`. |
+| Receptionist auth shell | login as `reception` | `data-testid="app-shell"`, `data-role="receptionist"`, `data-testid="reception-scheduling-unavailable-state"`, `data-screen-code="CONTRACT_PENDING"`. |
+| Forbidden route denial | receptionist opens `/app/admin` directly | `data-testid="route-forbidden-state"` while the shell still reports `data-role="receptionist"`. |
+| Doctor auth shell | login as `doctor` | `data-testid="app-shell"`, `data-role="doctor"`, `data-testid="doctor-queue-unavailable-state"`, `data-screen-code="CONTRACT_PENDING"`. |
+| Refresh-failure logout | sign out, inject an expired session into `sessionStorage['hms.frontend.session']`, then open `/app/admin` | bounded return to `/login`, `data-testid="refresh-required-banner"`, and login-page `data-auth-status="refresh-failed"`. |
+
+Blocker-aware acceptance rule for S10:
+
+- `CONTRACT_PENDING` on admin, reception scheduling, and doctor queue is the **expected** truthful state for this slice.
+- Treat any happy-path operational data on those screens as a failure for S10 because the live Node admin, scheduling, and queue contracts are not wired yet.
+- S10 proves the real auth/RBAC shell, guarded-route denial, and refresh boundaries only; full R010 operational closure still depends on the future Node OPD contracts.
+
 Current coverage in the foundation layer includes:
 
 - route shell smoke tests

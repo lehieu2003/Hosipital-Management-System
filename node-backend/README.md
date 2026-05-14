@@ -21,5 +21,7 @@ npm --prefix node-backend run dev
 
 ## Current Scope
 - Health endpoint scaffolded at `/api/v1/healthz`
-- Error envelope and structured logging in place
-- Auth/RBAC/appointments migration still pending from the legacy Python backend
+- Live auth surface available today at `/api/v1/auth/login`, `/api/v1/auth/me`, `/api/v1/auth/refresh`, and `/api/v1/auth/logout`
+- Seeded local accounts available for stage-like verification: `admin`, `reception`, and `doctor` with password `secret123`
+- Auth/RBAC shell proof is available against the React frontend, but admin operational data, reception scheduling data, and doctor queue data still intentionally stop at `CONTRACT_PENDING`
+- Appointments and broader OPD contract migration are still pending from the legacy Python backend

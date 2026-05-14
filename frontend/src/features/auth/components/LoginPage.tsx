@@ -90,7 +90,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="medical-shell min-h-screen px-4 py-6 sm:px-6 lg:px-8">
+    <div className="medical-shell min-h-screen px-4 py-6 sm:px-6 lg:px-8" data-testid="login-page">
       <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-7xl gap-5 xl:grid-cols-[minmax(0,1.25fr)_440px]">
         <section className="dashboard-card overflow-hidden p-0">
           <div className="flex h-[70px] items-center justify-between border-b border-border px-7">

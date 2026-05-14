@@ -104,6 +104,9 @@ export function MainLayout() {
         'medical-shell min-h-screen lg:grid lg:transition-[grid-template-columns] lg:duration-300 lg:ease-out',
         isSidebarOpen ? 'lg:grid-cols-[320px_minmax(0,1fr)]' : 'lg:grid-cols-[88px_minmax(0,1fr)]',
       )}
+      data-auth-status={authStatus}
+      data-role={session?.role ?? 'anonymous'}
+      data-testid="app-shell"
     >
       <aside
         id="app-sidebar"
@@ -133,7 +136,11 @@ export function MainLayout() {
           </div>
 
           <div className={cn('min-h-0 flex-1 overflow-y-auto py-6', isSidebarOpen ? 'px-5' : 'px-3')}>
-            <nav aria-label="Primary navigation" className={cn(isSidebarOpen ? 'space-y-7' : 'space-y-4')}>
+            <nav
+              aria-label="Primary navigation"
+              className={cn(isSidebarOpen ? 'space-y-7' : 'space-y-4')}
+              data-testid="primary-navigation"
+            >
               {navGroups.map((group) => {
                 const visibleItems = group.items.filter(
                   (item) => session && item.roles.includes(session.role),

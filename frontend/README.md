@@ -1,73 +1,128 @@
-# React + TypeScript + Vite
+# Frontend Workspace
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite + TypeScript SPA for the OPD frontend foundation.
 
-Currently, two official plugins are available:
+## Purpose
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+This workspace owns the browser runtime for M001:
 
-## React Compiler
+- public landing page at `/`
+- login flow at `/login`
+- protected app shell under `/app/*`
+- role-aware navigation for Admin, Receptionist, and Doctor
+- backend adapter seams for auth/session and future OPD contracts
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The frontend is intentionally kept separate from the backend runtime. It does not assume SSR and it does not bind the shell to legacy FastAPI-only transport details.
 
-## Expanding the ESLint configuration
+## Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- React 19
+- Vite 8
+- TypeScript 6 (strict-ish app config)
+- Tailwind CSS 4
+- React Router 7
+- TanStack Query 5
+- Vitest + Testing Library
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Quick Start
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm --prefix frontend install
+npm --prefix frontend run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Default app URL:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- `http://localhost:5173`
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Default API base URL when unset:
+
+- `http://localhost:3000/api/v1`
+
+## Environment
+
+Set frontend runtime config with Vite environment variables:
+
+```bash
+VITE_API_BASE_URL=http://localhost:3000/api/v1
 ```
+
+`src/lib/config.ts` is the canonical place for reading browser runtime configuration.
+
+## Route Foundation
+
+- `/` — public landing page
+- `/login` — sign-in entrypoint
+- `/app` — authenticated redirect based on role
+- `/app/admin` — admin shell landing
+- `/app/reception/scheduling` — receptionist scheduling shell
+- `/app/doctor/queue` — doctor queue shell
+
+## Runtime Seams
+
+### Auth/session
+
+`src/lib/auth/session.ts` defines the typed client session model and storage helpers.
+
+`src/features/auth/stores/auth-provider.tsx` owns:
+
+- login
+- logout
+- boot-time session validation
+- refresh-on-expiry handling
+- fail-closed transition to `refresh-failed`
+
+### API boundary
+
+`src/lib/api/client.ts` is the stable HTTP seam for future contract wiring. It currently provides:
+
+- base URL normalization
+- cookie-aware requests
+- bearer token injection from a session manager
+- one-time refresh + replay on expired access tokens
+- normalized error codes for `AUTH_EXPIRED`, `REFRESH_FAILED`, `FORBIDDEN`, `CONFLICT`, and `UNAVAILABLE`
+
+Downstream slices should wire endpoint-specific modules through this client rather than baking transport behavior directly into pages.
+
+## Observability Surfaces
+
+The frontend foundation exposes deterministic machine-readable signals for later tasks and browser verification:
+
+- `data-testid="landing-page"`
+- `data-testid="login-page"`
+- `data-testid="auth-loading-state"`
+- `data-testid="app-shell"`
+- `data-testid="primary-navigation"`
+- `data-testid="refresh-failed-banner"`
+- `data-testid="refresh-required-banner"`
+- `data-testid="login-error-banner"`
+
+The protected shell also exposes:
+
+- `data-role` on `app-shell`
+- `data-auth-status` on `app-shell`
+
+These are the preferred diagnostics for auth/session and route-gating checks.
+
+## Testing
+
+Run the task verification command:
+
+```bash
+npm --prefix frontend run test -- --runInBand
+```
+
+Current coverage in the foundation layer includes:
+
+- route shell smoke tests
+- config default/override tests
+- API client refresh + replay behavior
+- fail-closed auth failure mapping
+- role-aware navigation and shell observability tests
+
+## Notes for Future Slices
+
+- Keep protected application work under `/app/*`.
+- Prefer direct feature/module imports with the `@/` alias.
+- Avoid adding global state beyond the existing auth provider unless a later slice proves it is necessary.
+- Keep backend-specific endpoint assumptions behind the API client and feature adapters.

@@ -13,7 +13,7 @@ export function ProtectedRoute({ children }: PropsWithChildren) {
 
   if (authStatus === 'booting' || authStatus === 'refreshing') {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4 py-6 sm:px-6">
+      <div className="flex min-h-screen items-center justify-center px-4 py-6 sm:px-6" data-testid="auth-loading-state">
         <Card className="w-full max-w-xl border-primary/10 bg-background/90 shadow-sm">
           <CardHeader className="space-y-4">
             <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">

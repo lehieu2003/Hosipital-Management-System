@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { App } from '@/app/App';
 import { AuthProvider } from '@/features/auth';
 
-function renderApp(initialEntries: string[] = ['/login']) {
+function renderApp(initialEntries: string[] = ['/']) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -31,7 +31,18 @@ describe('App scaffold', () => {
     window.sessionStorage.clear();
   });
 
-  it('should render the login shell for anonymous users', () => {
+  it('should render the landing page for anonymous users on the home route', () => {
+    renderApp(['/']);
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'From registration to queue flow, in one calm clinical workspace.',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /sign in/i }).length).toBeGreaterThan(0);
+  });
+
+  it('should render the login shell on the login route', () => {
     renderApp(['/login']);
 
     expect(
@@ -40,8 +51,8 @@ describe('App scaffold', () => {
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 
-  it('should redirect anonymous users from the home route to login', () => {
-    renderApp(['/']);
+  it('should redirect anonymous users from protected app routes to login', () => {
+    renderApp(['/app/admin']);
 
     expect(
       screen.getByRole('heading', { name: 'Hospital Management UI runtime' }),

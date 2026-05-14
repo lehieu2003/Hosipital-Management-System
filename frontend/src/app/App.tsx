@@ -16,9 +16,10 @@ import { Button } from '@/components/ui/button';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { SchedulingPage } from '@/features/appointments/SchedulingPage';
 import { LoginPage, ProtectedRoute, resolveHomePath, useAuth } from '@/features/auth';
+import { LandingPage } from '@/features/landing/LandingPage';
 import { QueuePage } from '@/features/queue/QueuePage';
 
-function HomeRedirect() {
+function AppRedirect() {
   const { session } = useAuth();
 
   if (!session) {
@@ -276,12 +277,13 @@ function AdminPage() {
 export function App() {
   return (
     <Routes>
+      <Route element={<LandingPage />} path="/" />
       <Route element={<LoginPage />} path="/login" />
-      <Route element={<HomeRedirect />} path="/" />
-      <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-        <Route element={<AdminPage />} path="/admin" />
-        <Route element={<SchedulingPage />} path="/reception/scheduling" />
-        <Route element={<QueuePage />} path="/doctor/queue" />
+      <Route element={<AppRedirect />} path="/app" />
+      <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>} path="/app">
+        <Route element={<AdminPage />} path="admin" />
+        <Route element={<SchedulingPage />} path="reception/scheduling" />
+        <Route element={<QueuePage />} path="doctor/queue" />
       </Route>
     </Routes>
   );

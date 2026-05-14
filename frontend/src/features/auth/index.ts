@@ -13,12 +13,12 @@ export {
 
 export function resolveHomePath(role: 'admin' | 'doctor' | 'receptionist') {
   if (role === 'doctor') {
-    return '/doctor/queue';
+    return '/app/doctor/queue';
   }
 
   if (role === 'receptionist') {
-    return '/reception/scheduling';
+    return '/app/reception/scheduling';
   }
 
-  return '/admin';
+  return '/app/admin';
 }

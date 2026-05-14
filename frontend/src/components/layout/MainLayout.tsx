@@ -42,19 +42,19 @@ const navGroups: Array<{
         icon: ShieldCheck,
         label: 'Admin Dashboard',
         roles: ['admin'],
-        to: '/admin',
+        to: '/app/admin',
       },
       {
         icon: CalendarDays,
         label: 'Scheduling',
         roles: ['receptionist', 'admin'],
-        to: '/reception/scheduling',
+        to: '/app/reception/scheduling',
       },
       {
         icon: Activity,
         label: 'Doctor Queue',
         roles: ['doctor', 'admin'],
-        to: '/doctor/queue',
+        to: '/app/doctor/queue',
       },
     ],
   },
@@ -65,22 +65,22 @@ const navGroups: Array<{
         icon: Stethoscope,
         label: 'Departments',
         roles: ['admin'],
-        to: '/admin',
+        to: '/app/admin',
       },
       {
         icon: CircleGauge,
         label: 'Patient Flow',
         roles: ['admin', 'doctor', 'receptionist'],
-        to: '/doctor/queue',
+        to: '/app/doctor/queue',
       },
     ],
   },
 ];
 
 const titles: Record<string, string> = {
-  '/admin': 'Hospital Dashboard',
-  '/doctor/queue': 'Doctor Queue',
-  '/reception/scheduling': 'Scheduling Dashboard',
+  '/app/admin': 'Hospital Dashboard',
+  '/app/doctor/queue': 'Doctor Queue',
+  '/app/reception/scheduling': 'Scheduling Dashboard',
 };
 
 function navLinkClass(isActive: boolean) {

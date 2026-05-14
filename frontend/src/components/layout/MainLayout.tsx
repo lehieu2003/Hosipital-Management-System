@@ -111,12 +111,12 @@ export function MainLayout() {
     >
       <aside
         id="app-sidebar"
-        className="border-b border-sidebar-border bg-sidebar lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden lg:border-r lg:border-b-0"
+        className="sidebar-surface lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden"
       >
         <div className="flex h-full flex-col">
           <div
             className={cn(
-              'flex h-[70px] items-center border-b border-sidebar-border transition-[padding] duration-300',
+              'flex h-[70px] items-center transition-[padding] duration-300',
               isSidebarOpen ? 'justify-between px-7' : 'justify-center px-3',
             )}
           >
@@ -193,7 +193,7 @@ export function MainLayout() {
           <div className={cn('space-y-5 p-5', !isSidebarOpen && 'p-3')}>
             <div
               className={cn(
-                'rounded-2xl border border-cyan-100 bg-white p-4 shadow-sm',
+                'rounded-2xl border border-white/70 bg-white/72 p-4 shadow-sm backdrop-blur',
                 !isSidebarOpen && 'hidden',
               )}
             >
@@ -246,8 +246,8 @@ export function MainLayout() {
         </div>
       </aside>
 
-      <div className="min-w-0">
-        <header className="sticky top-0 z-20 border-b border-border bg-white/90 backdrop-blur">
+      <div className="main-surface min-w-0">
+        <header className="sticky top-0 z-20 bg-white/86 shadow-[0_1px_18px_rgb(6_95_120/0.06)] backdrop-blur">
           <div className="flex h-[70px] items-center gap-4 px-5 lg:px-8">
             <Button
               aria-controls="app-sidebar"

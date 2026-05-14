@@ -79,7 +79,8 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--border);
+    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
     box-sizing: border-box;
   }
 
@@ -145,10 +146,24 @@
   }
 
   .medical-shell {
+    background: #eef8f7;
+  }
+
+  .sidebar-surface {
     background:
-      radial-gradient(circle at 14% -6%, rgb(34 211 238 / 0.2), transparent 30%),
-      radial-gradient(circle at 90% 0%, rgb(52 211 153 / 0.16), transparent 28%),
-      linear-gradient(180deg, #f5fdff 0%, #eef9f7 100%);
+      linear-gradient(180deg, rgb(241 250 255 / 0.96) 0%, rgb(229 247 249 / 0.94) 48%, rgb(239 253 249 / 0.96) 100%),
+      radial-gradient(circle at 0% 0%, rgb(34 211 238 / 0.22), transparent 34%);
+    box-shadow:
+      inset -1px 0 0 rgb(255 255 255 / 0.7),
+      18px 0 44px rgb(6 95 120 / 0.08);
+  }
+
+  .main-surface {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 84% 2%, rgb(52 211 153 / 0.14), transparent 28%),
+      radial-gradient(circle at 18% -8%, rgb(14 165 233 / 0.08), transparent 30%),
+      linear-gradient(180deg, #fbfdff 0%, #f3fbfb 42%, #eef7f5 100%);
   }
 
   .brand-mark {

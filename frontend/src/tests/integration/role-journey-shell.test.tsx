@@ -90,9 +90,12 @@ describe('role journey shell integration', () => {
       expect(location).toHaveAttribute('data-pathname', '/app/reception/scheduling');
     });
 
+    expect(await screen.findByTestId('reception-scheduling-page')).toBeInTheDocument();
     const readyState = await screen.findByTestId('reception-scheduling-ready-state');
     expect(readyState).toHaveAttribute('data-screen-code', 'READY');
+    expect(readyState).toHaveAttribute('data-screen-status', 'idle');
     expect(screen.getByTestId('appointment-doctor-select')).toBeInTheDocument();
+    expect(screen.queryByTestId('reception-scheduling-unavailable-state')).not.toBeInTheDocument();
   });
 
   it('routes seeded doctor login to the live queue shell', async () => {
@@ -151,9 +154,11 @@ describe('role journey shell integration', () => {
       expect(location).toHaveAttribute('data-pathname', '/app/doctor/queue');
     });
 
+    expect(await screen.findByTestId('doctor-queue-page')).toBeInTheDocument();
     const queueItem = await screen.findByTestId('doctor-queue-item-appointment-1');
     expect(queueItem).toHaveAttribute('data-appointment-status', 'SCHEDULED');
     expect(screen.getByTestId('doctor-queue-action-ready-state')).toHaveAttribute('data-screen-code', 'READY');
+    expect(screen.queryByTestId('doctor-queue-unavailable-state')).not.toBeInTheDocument();
   });
 
   it('renders the login boundary for anonymous access to protected routes', async () => {

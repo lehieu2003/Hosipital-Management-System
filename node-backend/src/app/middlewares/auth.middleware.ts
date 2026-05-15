@@ -6,12 +6,14 @@ import { AppError } from '../../shared/errors/app-error.js';
 import { verifyAccessToken } from '../../shared/helpers/jwt.helper.js';
 import { logger } from '../../shared/utils/logger.js';
 
-type AuthenticatedRequest = Request & {
-  auth?: {
-    userId: string;
-    role: string;
-    username: string;
-  };
+export type AuthPrincipal = {
+  userId: string;
+  role: string;
+  username: string;
+};
+
+export type AuthenticatedRequest = Request & {
+  auth?: AuthPrincipal;
 };
 
 export const authMiddleware = async (
@@ -36,6 +38,17 @@ export const authMiddleware = async (
       return next(new AppError('Invalid access token', 401, 'INVALID_ACCESS_TOKEN'));
     }
 
+    if (payload.role !== user.role) {
+      logger.warn(
+        {
+          dbRole: user.role,
+          tokenRole: payload.role,
+          userId: user.id,
+        },
+        'auth_role_claim_ignored',
+      );
+    }
+
     req.auth = {
       userId: user.id,
       role: user.role,
@@ -57,3 +70,4 @@ export const authMiddleware = async (
     return next(new AppError('Invalid access token', 401, 'INVALID_ACCESS_TOKEN'));
   }
 };
+

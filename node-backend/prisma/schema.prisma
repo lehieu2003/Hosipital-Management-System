@@ -13,15 +13,32 @@ enum UserRole {
   DOCTOR
 }
 
+enum PatientGender {
+  FEMALE
+  MALE
+  OTHER
+  UNSPECIFIED
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CHECKED_IN
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
 model User {
-  id            String           @id @default(cuid())
-  username      String           @unique
-  passwordHash  String           @map("password_hash")
-  role          UserRole
-  isActive      Boolean          @default(true) @map("is_active")
-  createdAt     DateTime         @default(now()) @map("created_at")
-  updatedAt     DateTime         @updatedAt @map("updated_at")
-  refreshTokens RefreshSession[]
+  id                String           @id @default(cuid())
+  username          String           @unique
+  passwordHash      String           @map("password_hash")
+  role              UserRole
+  isActive          Boolean          @default(true) @map("is_active")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+  refreshTokens     RefreshSession[]
+  registeredPatients Patient[]       @relation("RegisteredPatients")
+  doctorAppointments Appointment[]   @relation("DoctorAppointments")
 
   @@map("users")
   @@index([username], map: "idx_users_username")
@@ -43,4 +60,43 @@ model RefreshSession {
   @@map("refresh_sessions")
   @@index([userId], map: "idx_refresh_sessions_user_id")
   @@index([expiresAt], map: "idx_refresh_sessions_expires_at")
+}
+
+model Patient {
+  id                 String         @id @default(cuid())
+  registrationNumber String         @unique @default(cuid()) @map("registration_number")
+  fullName           String         @map("full_name")
+  primaryPhone       String         @map("primary_phone")
+  email              String?
+  dateOfBirth        DateTime?      @map("date_of_birth")
+  gender             PatientGender?
+  address            String?
+  createdByUserId    String         @map("created_by_user_id")
+  createdByUser      User           @relation("RegisteredPatients", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+  appointments       Appointment[]
+
+  @@map("patients")
+  @@index([fullName], map: "idx_patients_full_name")
+  @@index([createdByUserId], map: "idx_patients_created_by_user_id")
+}
+
+model Appointment {
+  id              String            @id @default(cuid())
+  patientId       String            @map("patient_id")
+  patient         Patient           @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  doctorUserId    String            @map("doctor_user_id")
+  doctor          User              @relation("DoctorAppointments", fields: [doctorUserId], references: [id], onDelete: Restrict)
+  scheduledAt     DateTime          @map("scheduled_at")
+  durationMinutes Int               @default(30) @map("duration_minutes")
+  status          AppointmentStatus @default(SCHEDULED)
+  notes           String?
+  version         Int               @default(1)
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  @@map("appointments")
+  @@index([patientId], map: "idx_appointments_patient_id")
+  @@index([doctorUserId, scheduledAt], map: "idx_appointments_doctor_scheduled_at")
 }

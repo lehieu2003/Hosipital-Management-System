@@ -23,62 +23,106 @@ describe('role journey shell integration', () => {
     window.sessionStorage.clear();
   });
 
-  it.each([
-    {
-      expectedPath: '/app/admin',
-      role: 'admin' as const,
-      screenCode: 'CONTRACT_PENDING',
-      stateTestId: 'admin-overview-unavailable-state',
-      username: 'admin',
-    },
-    {
-      expectedPath: '/app/reception/scheduling',
-      role: 'receptionist' as const,
-      screenCode: 'CONTRACT_PENDING',
-      stateTestId: 'reception-scheduling-unavailable-state',
-      username: 'reception',
-    },
-    {
-      expectedPath: '/app/doctor/queue',
-      role: 'doctor' as const,
-      screenCode: 'CONTRACT_PENDING',
-      stateTestId: 'doctor-queue-unavailable-state',
-      username: 'doctor',
-    },
-  ])('routes seeded $role login to the real home shell', async ({
-    expectedPath,
-    role,
-    screenCode,
-    stateTestId,
-    username,
-  }) => {
+  it('routes seeded admin login to the real home shell', async () => {
     fetchMock.mockResolvedValueOnce(
       authSuccessResponse({
-        accessToken: `${role}-token`,
-        role,
-        username,
+        accessToken: 'admin-token',
+        role: 'admin',
+        username: 'admin',
       }),
     );
 
     const user = userEvent.setup();
     renderApp({ initialEntries: ['/login'] });
 
-    await user.type(screen.getByTestId('username-input'), username);
+    await user.type(screen.getByTestId('username-input'), 'admin');
     await user.type(screen.getByTestId('password-input'), 'secret123');
     await user.click(screen.getByTestId('login-submit-button'));
 
     const shell = await screen.findByTestId('app-shell');
-    expect(shell).toHaveAttribute('data-role', role);
+    expect(shell).toHaveAttribute('data-role', 'admin');
     expect(shell).toHaveAttribute('data-auth-status', 'authenticated');
     expect(shell).toHaveAttribute('data-session-notice', 'none');
 
     const location = screen.getByTestId('router-location');
     await waitFor(() => {
-      expect(location).toHaveAttribute('data-pathname', expectedPath);
+      expect(location).toHaveAttribute('data-pathname', '/app/admin');
     });
 
-    const state = await screen.findByTestId(stateTestId);
-    expect(state).toHaveAttribute('data-screen-code', screenCode);
+    const state = await screen.findByTestId('admin-overview-unavailable-state');
+    expect(state).toHaveAttribute('data-screen-code', 'CONTRACT_PENDING');
+    expect(state).toHaveAttribute('data-screen-status', 'unavailable');
+  });
+
+  it('routes seeded receptionist login to the live scheduling shell', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        authSuccessResponse({
+          accessToken: 'receptionist-token',
+          role: 'receptionist',
+          username: 'reception',
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: [{ id: 'doctor-1', username: 'doctor.alex' }],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      );
+
+    const user = userEvent.setup();
+    renderApp({ initialEntries: ['/login'] });
+
+    await user.type(screen.getByTestId('username-input'), 'reception');
+    await user.type(screen.getByTestId('password-input'), 'secret123');
+    await user.click(screen.getByTestId('login-submit-button'));
+
+    const shell = await screen.findByTestId('app-shell');
+    expect(shell).toHaveAttribute('data-role', 'receptionist');
+    expect(shell).toHaveAttribute('data-auth-status', 'authenticated');
+    expect(shell).toHaveAttribute('data-session-notice', 'none');
+
+    const location = screen.getByTestId('router-location');
+    await waitFor(() => {
+      expect(location).toHaveAttribute('data-pathname', '/app/reception/scheduling');
+    });
+
+    const readyState = await screen.findByTestId('reception-scheduling-ready-state');
+    expect(readyState).toHaveAttribute('data-screen-code', 'READY');
+    expect(screen.getByTestId('appointment-doctor-select')).toBeInTheDocument();
+  });
+
+  it('routes seeded doctor login to the real home shell', async () => {
+    fetchMock.mockResolvedValueOnce(
+      authSuccessResponse({
+        accessToken: 'doctor-token',
+        role: 'doctor',
+        username: 'doctor',
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderApp({ initialEntries: ['/login'] });
+
+    await user.type(screen.getByTestId('username-input'), 'doctor');
+    await user.type(screen.getByTestId('password-input'), 'secret123');
+    await user.click(screen.getByTestId('login-submit-button'));
+
+    const shell = await screen.findByTestId('app-shell');
+    expect(shell).toHaveAttribute('data-role', 'doctor');
+    expect(shell).toHaveAttribute('data-auth-status', 'authenticated');
+    expect(shell).toHaveAttribute('data-session-notice', 'none');
+
+    const location = screen.getByTestId('router-location');
+    await waitFor(() => {
+      expect(location).toHaveAttribute('data-pathname', '/app/doctor/queue');
+    });
+
+    const state = await screen.findByTestId('doctor-queue-unavailable-state');
+    expect(state).toHaveAttribute('data-screen-code', 'CONTRACT_PENDING');
     expect(state).toHaveAttribute('data-screen-status', 'unavailable');
   });
 

@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SchedulingPage } from '@/features/appointments/SchedulingPage';
 import { AuthContext, type AuthContextValue, type UserSession } from '@/features/auth';
@@ -49,13 +49,39 @@ function renderSchedulingPage(authValue: AuthContextValue) {
   );
 }
 
-describe('operational foundations', () => {
-  it('surfaces a fail-closed unavailable state instead of fake scheduling data when no contract is wired', async () => {
+describe('scheduling page fail-closed boundary', () => {
+  const fetchMock = vi.fn<typeof fetch>();
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchMock.mockReset();
+  });
+
+  it('surfaces an unavailable state when doctor discovery cannot be verified', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          error: {
+            code: 'OPD_UNAVAILABLE',
+            message: 'Doctor directory unavailable.',
+          },
+        }),
+        {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
     renderSchedulingPage(buildAuthValue());
 
     const state = await screen.findByTestId('reception-scheduling-unavailable-state');
     expect(state).toHaveAttribute('data-screen-status', 'unavailable');
-    expect(state).toHaveAttribute('data-screen-code', 'CONTRACT_PENDING');
-    expect(screen.getByText(/no placeholder operational metrics/i)).toBeInTheDocument();
+    expect(state).toHaveAttribute('data-screen-code', 'UNAVAILABLE');
+    expect(screen.getByText(/directory-backed and never falls back to raw ids/i)).toBeInTheDocument();
   });
 });

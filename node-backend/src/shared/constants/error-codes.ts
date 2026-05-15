@@ -9,5 +9,6 @@ export const ERROR_CODES = {
   doctorNotFound: 'DOCTOR_NOT_FOUND',
   appointmentNotFound: 'APPOINTMENT_NOT_FOUND',
   appointmentVersionConflict: 'APPOINTMENT_VERSION_CONFLICT',
+  appointmentInvalidStatusTransition: 'APPOINTMENT_INVALID_STATUS_TRANSITION',
   schedulingTargetNotDoctor: 'SCHEDULING_TARGET_NOT_DOCTOR',
 } as const;

@@ -5,10 +5,14 @@ import type { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
 import { HTTP_STATUS } from '../../shared/constants/http-status.js';
 import { AppError } from '../../shared/errors/app-error.js';
 import { asyncHandler } from '../../shared/utils/async-handler.js';
+import {
+  appointmentIdParamsSchema,
+  updateDoctorQueueAppointmentSchema,
+} from '../validators/opd.validator.js';
 
-const serializeDoctorQueueItem = (
-  appointment: Awaited<ReturnType<typeof opdService.getDoctorQueue>>[number],
-) => ({
+type DoctorQueueAppointment = Awaited<ReturnType<typeof opdService.getDoctorQueue>>[number];
+
+const serializeDoctorQueueItem = (appointment: DoctorQueueAppointment) => ({
   id: appointment.id,
   patientId: appointment.patientId,
   doctorUserId: appointment.doctorUserId,
@@ -41,6 +45,29 @@ export const getDoctorQueueController = asyncHandler(
     return res.status(HTTP_STATUS.ok).json({
       success: true,
       data: queue.map(serializeDoctorQueueItem),
+    });
+  },
+);
+
+export const updateDoctorQueueAppointmentController = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const principal = req.auth;
+    const params = appointmentIdParamsSchema.parse(req.params);
+    const payload = updateDoctorQueueAppointmentSchema.parse(req.body);
+
+    if (!principal) {
+      throw new AppError('Bearer token is required', HTTP_STATUS.unauthorized, 'MISSING_BEARER_TOKEN');
+    }
+
+    const appointment = await opdService.updateDoctorQueueAppointment(
+      params.appointmentId,
+      payload,
+      principal,
+    );
+
+    return res.status(HTTP_STATUS.ok).json({
+      success: true,
+      data: serializeDoctorQueueItem(appointment),
     });
   },
 );

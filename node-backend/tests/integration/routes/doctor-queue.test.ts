@@ -10,10 +10,13 @@ const { appointmentStore, dbMock, dbState, patientStore, refreshSessionStore, us
   const userStore = new Map<string, any>();
   const dbState = {
     failNextAppointmentLookup: false,
+    failNextAppointmentUpdate: false,
     malformedNextQueueLookup: false,
+    malformedNextAppointmentLookup: false,
   };
 
   const dbMock: any = {
+    $transaction: async (callback: (tx: any) => Promise<any>) => callback(dbMock),
     user: {
       findUnique: async ({ where }: { where: { id?: string; username?: string } }) => {
         if (where.id) {
@@ -125,6 +128,64 @@ const { appointmentStore, dbMock, dbState, patientStore, refreshSessionStore, us
           patient: patientStore.get(appointment.patientId),
         }));
       },
+      findUnique: async ({ where, include }: { where: { id: string }; include?: { patient: boolean } }) => {
+        if (dbState.failNextAppointmentLookup) {
+          dbState.failNextAppointmentLookup = false;
+          throw new Error('database unavailable');
+        }
+
+        const appointment = appointmentStore.get(where.id) ?? null;
+        if (!appointment) {
+          return null;
+        }
+
+        if (!include?.patient) {
+          return appointment;
+        }
+
+        if (dbState.malformedNextAppointmentLookup) {
+          dbState.malformedNextAppointmentLookup = false;
+          return {
+            ...appointment,
+            patient: null,
+          };
+        }
+
+        return {
+          ...appointment,
+          patient: patientStore.get(appointment.patientId),
+        };
+      },
+      updateMany: async ({ where, data }: { where: any; data: any }) => {
+        if (dbState.failNextAppointmentUpdate) {
+          dbState.failNextAppointmentUpdate = false;
+          throw new Error('database unavailable');
+        }
+
+        const current = appointmentStore.get(where.id);
+        if (!current || current.version !== where.version) {
+          return { count: 0 };
+        }
+
+        if (where.doctorUserId !== undefined && current.doctorUserId !== where.doctorUserId) {
+          return { count: 0 };
+        }
+
+        const nextVersion = current.version + (data.version?.increment ?? 0);
+        const updatedRecord = {
+          ...current,
+          ...(data.doctorUserId !== undefined ? { doctorUserId: data.doctorUserId } : {}),
+          ...(data.scheduledAt !== undefined ? { scheduledAt: data.scheduledAt } : {}),
+          ...(data.durationMinutes !== undefined ? { durationMinutes: data.durationMinutes } : {}),
+          ...(data.status !== undefined ? { status: data.status } : {}),
+          ...(data.notes !== undefined ? { notes: data.notes } : {}),
+          version: nextVersion,
+          updatedAt: new Date(),
+        };
+
+        appointmentStore.set(where.id, updatedRecord);
+        return { count: 1 };
+      },
     },
   };
 
@@ -220,7 +281,9 @@ describe('doctor queue routes', () => {
     refreshSessionStore.clear();
     userStore.clear();
     dbState.failNextAppointmentLookup = false;
+    dbState.failNextAppointmentUpdate = false;
     dbState.malformedNextQueueLookup = false;
+    dbState.malformedNextAppointmentLookup = false;
     vi.restoreAllMocks();
   });
 
@@ -472,5 +535,315 @@ describe('doctor queue routes', () => {
         message: 'OPD persistence is temporarily unavailable',
       },
     });
+  });
+
+  it('should let assigned doctors advance queue lifecycle with deterministic version increments', async () => {
+    const app = createApp();
+    const loggerInfoSpy = vi.spyOn(logger, 'info');
+    const accessToken = await loginAs(app, 'doctor');
+    const doctor = findUserByUsername('doctor');
+    const patient = seedPatient({ fullName: 'Lifecycle Patient' });
+    const appointment = seedAppointment({
+      patientId: patient.id,
+      doctorUserId: doctor.id,
+      notes: 'secret-triage-note',
+      status: AppointmentStatus.SCHEDULED,
+      version: 1,
+    });
+
+    const checkInResponse = await request(app)
+      .patch(`/api/v1/doctor/queue/${appointment.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        version: 1,
+        status: 'CHECKED_IN',
+      });
+
+    expect(checkInResponse.status).toBe(200);
+    expect(checkInResponse.body.data).toEqual(
+      expect.objectContaining({
+        id: appointment.id,
+        doctorUserId: doctor.id,
+        patientId: patient.id,
+        status: AppointmentStatus.CHECKED_IN,
+        version: 2,
+        patient: expect.objectContaining({
+          id: patient.id,
+          fullName: 'Lifecycle Patient',
+          registrationNumber: patient.registrationNumber,
+        }),
+      }),
+    );
+    expect(checkInResponse.body.data.notes).toBeUndefined();
+
+    const completeResponse = await request(app)
+      .patch(`/api/v1/doctor/queue/${appointment.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        version: 2,
+        status: 'COMPLETED',
+      });
+
+    expect(completeResponse.status).toBe(200);
+    expect(completeResponse.body.data.status).toBe(AppointmentStatus.COMPLETED);
+    expect(completeResponse.body.data.version).toBe(3);
+    expect(loggerInfoSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorRole: UserRole.DOCTOR,
+        actorUserId: doctor.id,
+        appointmentId: appointment.id,
+        patientId: patient.id,
+        previousStatus: AppointmentStatus.CHECKED_IN,
+        nextStatus: AppointmentStatus.COMPLETED,
+        expectedVersion: 2,
+        currentVersion: 3,
+      }),
+      'opd_doctor_queue_updated',
+    );
+    const updateLogCall = loggerInfoSpy.mock.calls.find(([, message]) => message === 'opd_doctor_queue_updated');
+    expect(updateLogCall?.[0]).not.toHaveProperty('notes');
+  });
+
+  it('should reject stale doctor queue writes with explicit version conflicts', async () => {
+    const app = createApp();
+    const loggerWarnSpy = vi.spyOn(logger, 'warn');
+    const accessToken = await loginAs(app, 'doctor');
+    const doctor = findUserByUsername('doctor');
+    const patient = seedPatient({ fullName: 'Conflict Patient' });
+    const appointment = seedAppointment({
+      patientId: patient.id,
+      doctorUserId: doctor.id,
+      status: AppointmentStatus.CHECKED_IN,
+      version: 2,
+    });
+
+    const response = await request(app)
+      .patch(`/api/v1/doctor/queue/${appointment.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        version: 1,
+        status: 'COMPLETED',
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      success: false,
+      error: {
+        code: 'APPOINTMENT_VERSION_CONFLICT',
+        message: 'Appointment version conflict',
+      },
+    });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorRole: UserRole.DOCTOR,
+        actorUserId: doctor.id,
+        appointmentId: appointment.id,
+        patientId: patient.id,
+        previousStatus: AppointmentStatus.CHECKED_IN,
+        nextStatus: AppointmentStatus.COMPLETED,
+        expectedVersion: 1,
+        currentVersion: 2,
+      }),
+      'opd_doctor_queue_update_conflict',
+    );
+  });
+
+  it('should deny queue lifecycle updates for appointments owned by another doctor', async () => {
+    const app = createApp();
+    const loggerWarnSpy = vi.spyOn(logger, 'warn');
+    const accessToken = await loginAs(app, 'doctor');
+    const actingDoctor = findUserByUsername('doctor');
+    const otherDoctor = seedUser({ username: 'doctor-owner', role: UserRole.DOCTOR });
+    const patient = seedPatient({ fullName: 'Owned Elsewhere' });
+    const appointment = seedAppointment({
+      patientId: patient.id,
+      doctorUserId: otherDoctor.id,
+      status: AppointmentStatus.SCHEDULED,
+      version: 1,
+    });
+
+    const response = await request(app)
+      .patch(`/api/v1/doctor/queue/${appointment.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        version: 1,
+        status: 'CHECKED_IN',
+      });
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({
+      success: false,
+      error: {
+        code: 'FORBIDDEN',
+        message: 'Role is not permitted for this resource',
+      },
+    });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorRole: UserRole.DOCTOR,
+        actorUserId: actingDoctor.id,
+        appointmentId: appointment.id,
+        patientId: patient.id,
+        doctorUserId: otherDoctor.id,
+        currentStatus: AppointmentStatus.SCHEDULED,
+        expectedVersion: 1,
+        currentVersion: 1,
+      }),
+      'opd_doctor_queue_update_ownership_denied',
+    );
+    const denialLogCall = loggerWarnSpy.mock.calls.find(
+      ([, message]) => message === 'opd_doctor_queue_update_ownership_denied',
+    );
+    expect(denialLogCall?.[0]).not.toHaveProperty('notes');
+  });
+
+  it('should reject invalid lifecycle transitions and terminal queue re-entry', async () => {
+    const app = createApp();
+    const loggerWarnSpy = vi.spyOn(logger, 'warn');
+    const accessToken = await loginAs(app, 'doctor');
+    const doctor = findUserByUsername('doctor');
+    const patient = seedPatient({ fullName: 'Terminal Patient' });
+    const appointment = seedAppointment({
+      patientId: patient.id,
+      doctorUserId: doctor.id,
+      status: AppointmentStatus.COMPLETED,
+      version: 3,
+    });
+
+    const response = await request(app)
+      .patch(`/api/v1/doctor/queue/${appointment.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        version: 3,
+        status: 'CHECKED_IN',
+      });
+
+    expect(response.status).toBe(422);
+    expect(response.body).toEqual({
+      success: false,
+      error: {
+        code: 'APPOINTMENT_INVALID_STATUS_TRANSITION',
+        message: 'Doctor queue transition is not allowed',
+      },
+    });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorRole: UserRole.DOCTOR,
+        actorUserId: doctor.id,
+        appointmentId: appointment.id,
+        patientId: patient.id,
+        previousStatus: AppointmentStatus.COMPLETED,
+        nextStatus: AppointmentStatus.CHECKED_IN,
+        expectedVersion: 3,
+        currentVersion: 3,
+      }),
+      'opd_doctor_queue_update_invalid_transition',
+    );
+  });
+
+  it('should return appointment not found for missing doctor queue updates', async () => {
+    const app = createApp();
+    const accessToken = await loginAs(app, 'doctor');
+
+    const response = await request(app)
+      .patch('/api/v1/doctor/queue/missing-appointment')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        version: 1,
+        status: 'CHECKED_IN',
+      });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      success: false,
+      error: {
+        code: 'APPOINTMENT_NOT_FOUND',
+        message: 'Appointment not found',
+      },
+    });
+  });
+
+  it('should fail closed when doctor queue updates cannot reach persistence', async () => {
+    const app = createApp();
+    const loggerErrorSpy = vi.spyOn(logger, 'error');
+    const accessToken = await loginAs(app, 'doctor');
+    const doctor = findUserByUsername('doctor');
+    const patient = seedPatient({ fullName: 'Unavailable Update Patient' });
+    const appointment = seedAppointment({
+      patientId: patient.id,
+      doctorUserId: doctor.id,
+      status: AppointmentStatus.CHECKED_IN,
+      version: 2,
+    });
+
+    dbState.failNextAppointmentUpdate = true;
+
+    const response = await request(app)
+      .patch(`/api/v1/doctor/queue/${appointment.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        version: 2,
+        status: 'COMPLETED',
+      });
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      success: false,
+      error: {
+        code: 'OPD_UNAVAILABLE',
+        message: 'OPD persistence is temporarily unavailable',
+      },
+    });
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorRole: UserRole.DOCTOR,
+        actorUserId: doctor.id,
+        appointmentId: appointment.id,
+        patientId: patient.id,
+        previousStatus: AppointmentStatus.CHECKED_IN,
+        nextStatus: AppointmentStatus.COMPLETED,
+        expectedVersion: 2,
+        currentVersion: 2,
+        errorCode: 'OPD_UNAVAILABLE',
+      }),
+      'opd_doctor_queue_update_failed',
+    );
+  });
+
+  it('should reject malformed doctor queue update payloads and path params', async () => {
+    const app = createApp();
+    const accessToken = await loginAs(app, 'doctor');
+
+    const invalidBodyResponse = await request(app)
+      .patch('/api/v1/doctor/queue/appointment_999')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        version: '1',
+        status: 'CANCELLED',
+        doctorUserId: 'user_2',
+      });
+
+    expect(invalidBodyResponse.status).toBe(400);
+    expect(invalidBodyResponse.body.error.code).toBe('VALIDATION_ERROR');
+    expect(invalidBodyResponse.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: 'version' }),
+        expect.objectContaining({ path: 'status' }),
+      ]),
+    );
+
+    const invalidPathResponse = await request(app)
+      .patch('/api/v1/doctor/queue/%20')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        version: 1,
+        status: 'CHECKED_IN',
+      });
+
+    expect(invalidPathResponse.status).toBe(400);
+    expect(invalidPathResponse.body.error.code).toBe('VALIDATION_ERROR');
+    expect(invalidPathResponse.body.error.details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: 'appointmentId' })]),
+    );
   });
 });

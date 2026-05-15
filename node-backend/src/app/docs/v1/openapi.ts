@@ -28,6 +28,10 @@ export const openApiV1Document = {
       name: 'Appointments',
       description: 'OPD appointment scheduling and version-guarded update operations',
     },
+    {
+      name: 'Doctor Queue',
+      description: 'Doctor-owned queue reads and lifecycle updates',
+    },
   ],
   components: {
     securitySchemes: {
@@ -441,6 +445,144 @@ export const openApiV1Document = {
           },
         },
       },
+      DoctorQueuePatient: {
+        type: 'object',
+        required: ['id', 'registrationNumber', 'fullName', 'primaryPhone', 'dateOfBirth', 'gender'],
+        properties: {
+          id: {
+            type: 'string',
+            example: 'patient_1',
+          },
+          registrationNumber: {
+            type: 'string',
+            example: 'REG-1',
+          },
+          fullName: {
+            type: 'string',
+            example: 'Jane Doe',
+          },
+          primaryPhone: {
+            type: 'string',
+            example: '+1555000111',
+          },
+          dateOfBirth: {
+            type: 'string',
+            format: 'date',
+            nullable: true,
+            example: '1990-04-12',
+          },
+          gender: {
+            type: 'string',
+            enum: ['FEMALE', 'MALE', 'OTHER', 'UNSPECIFIED'],
+            nullable: true,
+          },
+        },
+      },
+      DoctorQueueAppointment: {
+        type: 'object',
+        required: [
+          'id',
+          'patientId',
+          'doctorUserId',
+          'scheduledAt',
+          'durationMinutes',
+          'status',
+          'version',
+          'createdAt',
+          'updatedAt',
+          'patient',
+        ],
+        properties: {
+          id: {
+            type: 'string',
+            example: 'appointment_1',
+          },
+          patientId: {
+            type: 'string',
+            example: 'patient_1',
+          },
+          doctorUserId: {
+            type: 'string',
+            example: 'user_1',
+          },
+          scheduledAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2026-05-15T09:30:00.000Z',
+          },
+          durationMinutes: {
+            type: 'integer',
+            example: 30,
+          },
+          status: {
+            type: 'string',
+            enum: ['SCHEDULED', 'CHECKED_IN', 'COMPLETED', 'CANCELLED', 'NO_SHOW'],
+          },
+          version: {
+            type: 'integer',
+            example: 2,
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          patient: {
+            $ref: '#/components/schemas/DoctorQueuePatient',
+          },
+        },
+      },
+      DoctorQueueEnvelope: {
+        type: 'object',
+        required: ['success', 'data'],
+        properties: {
+          success: {
+            type: 'boolean',
+            enum: [true],
+          },
+          data: {
+            type: 'array',
+            items: {
+              $ref: '#/components/schemas/DoctorQueueAppointment',
+            },
+          },
+        },
+      },
+      UpdateDoctorQueueAppointmentRequest: {
+        type: 'object',
+        required: ['version', 'status'],
+        additionalProperties: false,
+        properties: {
+          version: {
+            type: 'integer',
+            minimum: 1,
+            example: 1,
+          },
+          status: {
+            type: 'string',
+            enum: ['CHECKED_IN', 'COMPLETED'],
+            example: 'CHECKED_IN',
+          },
+        },
+        description:
+          'Doctor-owned lifecycle update. Allowed transitions are SCHEDULED -> CHECKED_IN and CHECKED_IN -> COMPLETED.',
+      },
+      DoctorQueueAppointmentEnvelope: {
+        type: 'object',
+        required: ['success', 'data'],
+        properties: {
+          success: {
+            type: 'boolean',
+            enum: [true],
+          },
+          data: {
+            $ref: '#/components/schemas/DoctorQueueAppointment',
+          },
+        },
+      },
     },
   },
   paths: {
@@ -677,6 +819,174 @@ export const openApiV1Document = {
           },
           '403': {
             description: 'Authenticated principal does not have scheduling privileges.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '503': {
+            description: 'OPD persistence is temporarily unavailable.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/doctor/queue': {
+      get: {
+        tags: ['Doctor Queue'],
+        summary: 'Get the authenticated doctor active queue',
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        responses: {
+          '200': {
+            description:
+              'Active queue for the authenticated doctor only, ordered by scheduledAt, createdAt, then id.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/DoctorQueueEnvelope',
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Bearer token is missing, invalid, or expired.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '403': {
+            description: 'Authenticated principal is not permitted to access doctor queue resources.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '503': {
+            description: 'OPD persistence is temporarily unavailable.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/doctor/queue/{appointmentId}': {
+      patch: {
+        tags: ['Doctor Queue'],
+        summary: 'Advance the authenticated doctor queue lifecycle with optimistic concurrency',
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: 'appointmentId',
+            in: 'path',
+            required: true,
+            schema: {
+              type: 'string',
+            },
+            description: 'Appointment identifier owned by the authenticated doctor.',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/UpdateDoctorQueueAppointmentRequest',
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Doctor queue lifecycle update succeeded and version incremented.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/DoctorQueueAppointmentEnvelope',
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Request body or path validation failed.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Bearer token is missing, invalid, or expired.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '403': {
+            description: 'Authenticated doctor does not own the appointment or is otherwise forbidden.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '404': {
+            description: 'Appointment was not found.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '409': {
+            description: 'Optimistic concurrency version check failed.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '422': {
+            description: 'Requested lifecycle transition is not allowed for the appointment state.',
             content: {
               'application/json': {
                 schema: {

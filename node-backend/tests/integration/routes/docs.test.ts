@@ -46,6 +46,8 @@ describe('Swagger docs routes', () => {
         '/auth/logout': expect.any(Object),
         '/auth/me': expect.any(Object),
         '/patients': expect.any(Object),
+        '/doctor/queue': expect.any(Object),
+        '/doctor/queue/{appointmentId}': expect.any(Object),
         '/appointments': expect.any(Object),
         '/appointments/{appointmentId}': expect.any(Object),
       }),
@@ -69,6 +71,34 @@ describe('Swagger docs routes', () => {
           '400': expect.any(Object),
           '401': expect.any(Object),
           '403': expect.any(Object),
+          '503': expect.any(Object),
+        }),
+      }),
+    );
+
+    expect(response.body.paths['/doctor/queue'].get).toEqual(
+      expect.objectContaining({
+        security: [{ bearerAuth: [] }],
+        responses: expect.objectContaining({
+          '200': expect.any(Object),
+          '401': expect.any(Object),
+          '403': expect.any(Object),
+          '503': expect.any(Object),
+        }),
+      }),
+    );
+
+    expect(response.body.paths['/doctor/queue/{appointmentId}'].patch).toEqual(
+      expect.objectContaining({
+        security: [{ bearerAuth: [] }],
+        responses: expect.objectContaining({
+          '200': expect.any(Object),
+          '400': expect.any(Object),
+          '401': expect.any(Object),
+          '403': expect.any(Object),
+          '404': expect.any(Object),
+          '409': expect.any(Object),
+          '422': expect.any(Object),
           '503': expect.any(Object),
         }),
       }),

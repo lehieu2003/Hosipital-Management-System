@@ -33,6 +33,7 @@ export type CreateAppointmentRecordInput = {
 export type UpdateAppointmentRecordInput = {
   appointmentId: string;
   expectedVersion: number;
+  ownedByDoctorUserId?: string;
   doctorUserId?: string;
   scheduledAt?: Date;
   durationMinutes?: number;
@@ -132,6 +133,27 @@ class OpdRepository {
     }
   }
 
+  async findAppointmentWithPatientById(id: string) {
+    try {
+      const appointment = await db.appointment.findUnique({
+        where: { id },
+        include: {
+          patient: true,
+        },
+      });
+
+      if (appointment && !appointment.patient) {
+        throw new Error('Appointment lookup returned malformed patient relation');
+      }
+
+      return appointment;
+    } catch (error) {
+      return wrapOpdStoreError('find_appointment_with_patient_by_id', error, {
+        appointmentId: id,
+      });
+    }
+  }
+
   async findActiveQueueByDoctorUserId(doctorUserId: string) {
     try {
       const appointments = await db.appointment.findMany({
@@ -155,6 +177,12 @@ class OpdRepository {
         throw new Error('Doctor queue lookup returned malformed payload');
       }
 
+      for (const appointment of appointments) {
+        if (!appointment.patient) {
+          throw new Error('Doctor queue lookup returned malformed patient relation');
+        }
+      }
+
       return appointments;
     } catch (error) {
       return wrapOpdStoreError('find_active_queue_by_doctor_user_id', error, {
@@ -167,6 +195,7 @@ class OpdRepository {
   async updateAppointmentWithVersion({
     appointmentId,
     expectedVersion,
+    ownedByDoctorUserId,
     doctorUserId,
     scheduledAt,
     durationMinutes,
@@ -210,6 +239,7 @@ class OpdRepository {
           where: {
             id: appointmentId,
             version: expectedVersion,
+            ...(ownedByDoctorUserId !== undefined ? { doctorUserId: ownedByDoctorUserId } : {}),
           },
           data: updateData,
         });
@@ -232,6 +262,7 @@ class OpdRepository {
       return wrapOpdStoreError('update_appointment_with_version', error, {
         appointmentId,
         expectedVersion,
+        ownedByDoctorUserId,
       });
     }
   }

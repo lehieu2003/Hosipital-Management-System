@@ -33,6 +33,19 @@ export type UpdateAppointmentInput = {
   notes?: string | null;
 };
 
+export type UpdateDoctorQueueAppointmentInput = {
+  version: number;
+  status: 'CHECKED_IN' | 'COMPLETED';
+};
+
+const DOCTOR_ALLOWED_STATUS_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
+  [AppointmentStatus.SCHEDULED]: [AppointmentStatus.CHECKED_IN],
+  [AppointmentStatus.CHECKED_IN]: [AppointmentStatus.COMPLETED],
+  [AppointmentStatus.COMPLETED]: [],
+  [AppointmentStatus.CANCELLED]: [],
+  [AppointmentStatus.NO_SHOW]: [],
+};
+
 const normalizeDateOfBirth = (dateOfBirth?: string) => {
   if (!dateOfBirth) {
     return undefined;
@@ -91,6 +104,129 @@ class OpdService {
             errorCode: error.code,
           },
           'opd_doctor_queue_read_failed',
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  async updateDoctorQueueAppointment(
+    appointmentId: string,
+    input: UpdateDoctorQueueAppointmentInput,
+    actor: AuthPrincipal,
+  ) {
+    ensureDoctorActor(actor);
+
+    const currentAppointment = await this.getAppointmentWithPatientById(appointmentId);
+
+    if (currentAppointment.doctorUserId !== actor.userId) {
+      logger.warn(
+        {
+          actorRole: actor.role,
+          actorUserId: actor.userId,
+          appointmentId: currentAppointment.id,
+          patientId: currentAppointment.patientId,
+          doctorUserId: currentAppointment.doctorUserId,
+          currentStatus: currentAppointment.status,
+          expectedVersion: input.version,
+          currentVersion: currentAppointment.version,
+        },
+        'opd_doctor_queue_update_ownership_denied',
+      );
+
+      throw new AppError(
+        'Role is not permitted for this resource',
+        HTTP_STATUS.forbidden,
+        ERROR_CODES.forbidden,
+      );
+    }
+
+    const allowedNextStatuses = DOCTOR_ALLOWED_STATUS_TRANSITIONS[currentAppointment.status];
+    if (!allowedNextStatuses.includes(input.status)) {
+      logger.warn(
+        {
+          actorRole: actor.role,
+          actorUserId: actor.userId,
+          appointmentId: currentAppointment.id,
+          patientId: currentAppointment.patientId,
+          previousStatus: currentAppointment.status,
+          nextStatus: input.status,
+          expectedVersion: input.version,
+          currentVersion: currentAppointment.version,
+        },
+        'opd_doctor_queue_update_invalid_transition',
+      );
+
+      throw new AppError(
+        'Doctor queue transition is not allowed',
+        HTTP_STATUS.unprocessableEntity,
+        ERROR_CODES.appointmentInvalidStatusTransition,
+      );
+    }
+
+    try {
+      const updatedAppointment = await opdRepository.updateAppointmentWithVersion({
+        appointmentId,
+        expectedVersion: input.version,
+        ownedByDoctorUserId: actor.userId,
+        status: input.status,
+      });
+
+      if (!updatedAppointment) {
+        logger.warn(
+          {
+            actorRole: actor.role,
+            actorUserId: actor.userId,
+            appointmentId: currentAppointment.id,
+            patientId: currentAppointment.patientId,
+            previousStatus: currentAppointment.status,
+            nextStatus: input.status,
+            expectedVersion: input.version,
+            currentVersion: currentAppointment.version,
+          },
+          'opd_doctor_queue_update_conflict',
+        );
+
+        throw new AppError(
+          'Appointment version conflict',
+          HTTP_STATUS.conflict,
+          ERROR_CODES.appointmentVersionConflict,
+        );
+      }
+
+      const appointment = await this.getAppointmentWithPatientById(updatedAppointment.id);
+
+      logger.info(
+        {
+          actorRole: actor.role,
+          actorUserId: actor.userId,
+          appointmentId: appointment.id,
+          patientId: appointment.patientId,
+          previousStatus: currentAppointment.status,
+          nextStatus: appointment.status,
+          expectedVersion: input.version,
+          currentVersion: appointment.version,
+        },
+        'opd_doctor_queue_updated',
+      );
+
+      return appointment;
+    } catch (error) {
+      if (error instanceof AppError && error.code === ERROR_CODES.opdUnavailable) {
+        logger.error(
+          {
+            actorRole: actor.role,
+            actorUserId: actor.userId,
+            appointmentId: currentAppointment.id,
+            patientId: currentAppointment.patientId,
+            previousStatus: currentAppointment.status,
+            nextStatus: input.status,
+            expectedVersion: input.version,
+            currentVersion: currentAppointment.version,
+            errorCode: error.code,
+          },
+          'opd_doctor_queue_update_failed',
         );
       }
 
@@ -268,6 +404,20 @@ class OpdService {
 
   async getAppointmentById(appointmentId: string) {
     const appointment = await opdRepository.findAppointmentById(appointmentId);
+
+    if (!appointment) {
+      throw new AppError(
+        'Appointment not found',
+        HTTP_STATUS.notFound,
+        ERROR_CODES.appointmentNotFound,
+      );
+    }
+
+    return appointment;
+  }
+
+  async getAppointmentWithPatientById(appointmentId: string) {
+    const appointment = await opdRepository.findAppointmentWithPatientById(appointmentId);
 
     if (!appointment) {
       throw new AppError(

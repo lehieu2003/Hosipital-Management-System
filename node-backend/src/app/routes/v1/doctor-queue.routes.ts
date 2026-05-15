@@ -1,7 +1,10 @@
 import { UserRole } from '@prisma/client';
 import { Router } from 'express';
 
-import { getDoctorQueueController } from '../../controllers/doctor-queue.controller.js';
+import {
+  getDoctorQueueController,
+  updateDoctorQueueAppointmentController,
+} from '../../controllers/doctor-queue.controller.js';
 import { authMiddleware } from '../../middlewares/auth.middleware.js';
 import { requireRoles } from '../../middlewares/rbac.middleware.js';
 
@@ -12,4 +15,11 @@ doctorQueueRoutes.get(
   authMiddleware,
   requireRoles(UserRole.DOCTOR),
   getDoctorQueueController,
+);
+
+doctorQueueRoutes.patch(
+  '/doctor/queue/:appointmentId',
+  authMiddleware,
+  requireRoles(UserRole.DOCTOR),
+  updateDoctorQueueAppointmentController,
 );

@@ -51,7 +51,15 @@ export const updateAppointmentSchema = z
     },
   );
 
+export const updateDoctorQueueAppointmentSchema = z
+  .object({
+    version: z.number().int().positive(),
+    status: z.enum([AppointmentStatus.CHECKED_IN, AppointmentStatus.COMPLETED]),
+  })
+  .strict();
+
 export type CreatePatientBody = z.infer<typeof createPatientSchema>;
 export type CreateAppointmentBody = z.infer<typeof createAppointmentSchema>;
 export type UpdateAppointmentBody = z.infer<typeof updateAppointmentSchema>;
+export type UpdateDoctorQueueAppointmentBody = z.infer<typeof updateDoctorQueueAppointmentSchema>;
 export type AppointmentIdParams = z.infer<typeof appointmentIdParamsSchema>;

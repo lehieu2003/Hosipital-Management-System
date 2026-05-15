@@ -1,4 +1,11 @@
-import { type Patient, type PatientGender, type User } from '@prisma/client';
+import {
+  AppointmentStatus,
+  type Appointment,
+  type Patient,
+  type PatientGender,
+  type Prisma,
+  type User,
+} from '@prisma/client';
 
 import { db } from '../../infrastructure/database/client.js';
 import { ERROR_CODES } from '../../shared/constants/error-codes.js';
@@ -14,6 +21,29 @@ export type CreatePatientRecordInput = {
   address?: string;
   createdByUserId: string;
 };
+
+export type CreateAppointmentRecordInput = {
+  patientId: string;
+  doctorUserId: string;
+  scheduledAt: Date;
+  durationMinutes?: number;
+  notes?: string | null;
+};
+
+export type UpdateAppointmentRecordInput = {
+  appointmentId: string;
+  expectedVersion: number;
+  doctorUserId?: string;
+  scheduledAt?: Date;
+  durationMinutes?: number;
+  status?: AppointmentStatus;
+  notes?: string | null;
+};
+
+const ACTIVE_DOCTOR_QUEUE_STATUSES = [
+  AppointmentStatus.SCHEDULED,
+  AppointmentStatus.CHECKED_IN,
+] as const;
 
 const wrapOpdStoreError = (
   action: string,
@@ -76,8 +106,143 @@ class OpdRepository {
       });
     }
   }
+
+  async createAppointment(data: CreateAppointmentRecordInput) {
+    try {
+      return await db.appointment.create({
+        data,
+      });
+    } catch (error) {
+      return wrapOpdStoreError('create_appointment', error, {
+        patientId: data.patientId,
+        doctorUserId: data.doctorUserId,
+      });
+    }
+  }
+
+  async findAppointmentById(id: string) {
+    try {
+      return await db.appointment.findUnique({
+        where: { id },
+      });
+    } catch (error) {
+      return wrapOpdStoreError('find_appointment_by_id', error, {
+        appointmentId: id,
+      });
+    }
+  }
+
+  async findActiveQueueByDoctorUserId(doctorUserId: string) {
+    try {
+      const appointments = await db.appointment.findMany({
+        where: {
+          doctorUserId,
+          status: {
+            in: [...ACTIVE_DOCTOR_QUEUE_STATUSES],
+          },
+        },
+        orderBy: [
+          { scheduledAt: 'asc' },
+          { createdAt: 'asc' },
+          { id: 'asc' },
+        ],
+        include: {
+          patient: true,
+        },
+      });
+
+      if (!Array.isArray(appointments)) {
+        throw new Error('Doctor queue lookup returned malformed payload');
+      }
+
+      return appointments;
+    } catch (error) {
+      return wrapOpdStoreError('find_active_queue_by_doctor_user_id', error, {
+        doctorUserId,
+        activeStatuses: ACTIVE_DOCTOR_QUEUE_STATUSES,
+      });
+    }
+  }
+
+  async updateAppointmentWithVersion({
+    appointmentId,
+    expectedVersion,
+    doctorUserId,
+    scheduledAt,
+    durationMinutes,
+    status,
+    notes,
+  }: UpdateAppointmentRecordInput) {
+    try {
+      return await db.$transaction(async (tx) => {
+        const updateData: {
+          doctorUserId?: string;
+          scheduledAt?: Date;
+          durationMinutes?: number;
+          status?: AppointmentStatus;
+          notes?: string | null;
+          version: { increment: number };
+        } = {
+          version: { increment: 1 },
+        };
+
+        if (doctorUserId !== undefined) {
+          updateData.doctorUserId = doctorUserId;
+        }
+
+        if (scheduledAt !== undefined) {
+          updateData.scheduledAt = scheduledAt;
+        }
+
+        if (durationMinutes !== undefined) {
+          updateData.durationMinutes = durationMinutes;
+        }
+
+        if (status !== undefined) {
+          updateData.status = status;
+        }
+
+        if (notes !== undefined) {
+          updateData.notes = notes;
+        }
+
+        const result = await tx.appointment.updateMany({
+          where: {
+            id: appointmentId,
+            version: expectedVersion,
+          },
+          data: updateData,
+        });
+
+        if (result.count === 0) {
+          return null;
+        }
+
+        const updatedAppointment = await tx.appointment.findUnique({
+          where: { id: appointmentId },
+        });
+
+        if (!updatedAppointment) {
+          throw new Error('Appointment update returned no row after successful write');
+        }
+
+        return updatedAppointment;
+      });
+    } catch (error) {
+      return wrapOpdStoreError('update_appointment_with_version', error, {
+        appointmentId,
+        expectedVersion,
+      });
+    }
+  }
 }
 
 export const opdRepository = new OpdRepository();
 export type OpdPatientRecord = Patient;
 export type OpdUserRecord = User;
+export type OpdAppointmentRecord = Appointment;
+export type OpdDoctorQueueRecord = Prisma.AppointmentGetPayload<{
+  include: {
+    patient: true;
+  };
+}>;

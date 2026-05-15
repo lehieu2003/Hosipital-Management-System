@@ -32,7 +32,7 @@ describe('Swagger docs routes', () => {
     expect(response.headers['content-type']).toContain('text/css');
   });
 
-  it('should serve the OpenAPI document outside production', async () => {
+  it('should serve the OpenAPI document outside production with protected OPD contract details', async () => {
     const response = await request(createApp()).get('/api/v1/openapi.json');
 
     expect(response.status).toBe(200);
@@ -45,6 +45,63 @@ describe('Swagger docs routes', () => {
         '/auth/refresh': expect.any(Object),
         '/auth/logout': expect.any(Object),
         '/auth/me': expect.any(Object),
+        '/patients': expect.any(Object),
+        '/appointments': expect.any(Object),
+        '/appointments/{appointmentId}': expect.any(Object),
+      }),
+    );
+
+    expect(response.body.components.securitySchemes).toEqual(
+      expect.objectContaining({
+        bearerAuth: expect.objectContaining({
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        }),
+      }),
+    );
+
+    expect(response.body.paths['/patients'].post).toEqual(
+      expect.objectContaining({
+        security: [{ bearerAuth: [] }],
+        responses: expect.objectContaining({
+          '201': expect.any(Object),
+          '400': expect.any(Object),
+          '401': expect.any(Object),
+          '403': expect.any(Object),
+          '503': expect.any(Object),
+        }),
+      }),
+    );
+
+    expect(response.body.paths['/appointments'].post).toEqual(
+      expect.objectContaining({
+        security: [{ bearerAuth: [] }],
+        responses: expect.objectContaining({
+          '201': expect.any(Object),
+          '400': expect.any(Object),
+          '401': expect.any(Object),
+          '403': expect.any(Object),
+          '404': expect.any(Object),
+          '422': expect.any(Object),
+          '503': expect.any(Object),
+        }),
+      }),
+    );
+
+    expect(response.body.paths['/appointments/{appointmentId}'].patch).toEqual(
+      expect.objectContaining({
+        security: [{ bearerAuth: [] }],
+        responses: expect.objectContaining({
+          '200': expect.any(Object),
+          '400': expect.any(Object),
+          '401': expect.any(Object),
+          '403': expect.any(Object),
+          '404': expect.any(Object),
+          '409': expect.any(Object),
+          '422': expect.any(Object),
+          '503': expect.any(Object),
+        }),
       }),
     );
   });

@@ -95,14 +95,44 @@ describe('role journey shell integration', () => {
     expect(screen.getByTestId('appointment-doctor-select')).toBeInTheDocument();
   });
 
-  it('routes seeded doctor login to the real home shell', async () => {
-    fetchMock.mockResolvedValueOnce(
-      authSuccessResponse({
-        accessToken: 'doctor-token',
-        role: 'doctor',
-        username: 'doctor',
-      }),
-    );
+  it('routes seeded doctor login to the live queue shell', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        authSuccessResponse({
+          accessToken: 'doctor-token',
+          role: 'doctor',
+          username: 'doctor',
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: [
+              {
+                id: 'appointment-1',
+                patientId: 'patient-1',
+                doctorUserId: 'user-1',
+                scheduledAt: '2026-05-20T02:30:00.000Z',
+                durationMinutes: 30,
+                status: 'SCHEDULED',
+                version: 1,
+                createdAt: '2026-05-20T01:45:00.000Z',
+                updatedAt: '2026-05-20T01:45:00.000Z',
+                patient: {
+                  id: 'patient-1',
+                  registrationNumber: 'REG-1001',
+                  fullName: 'Queue Patient',
+                  primaryPhone: '+1555000111',
+                  dateOfBirth: null,
+                  gender: 'UNSPECIFIED',
+                },
+              },
+            ],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      );
 
     const user = userEvent.setup();
     renderApp({ initialEntries: ['/login'] });
@@ -121,9 +151,9 @@ describe('role journey shell integration', () => {
       expect(location).toHaveAttribute('data-pathname', '/app/doctor/queue');
     });
 
-    const state = await screen.findByTestId('doctor-queue-unavailable-state');
-    expect(state).toHaveAttribute('data-screen-code', 'CONTRACT_PENDING');
-    expect(state).toHaveAttribute('data-screen-status', 'unavailable');
+    const queueItem = await screen.findByTestId('doctor-queue-item-appointment-1');
+    expect(queueItem).toHaveAttribute('data-appointment-status', 'SCHEDULED');
+    expect(screen.getByTestId('doctor-queue-action-ready-state')).toHaveAttribute('data-screen-code', 'READY');
   });
 
   it('renders the login boundary for anonymous access to protected routes', async () => {

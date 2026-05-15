@@ -55,7 +55,7 @@ describe('auth shell transitions', () => {
   });
 
   it('replays bootstrap once after refresh and persists the fresh access token', async () => {
-    storeSession();
+    storeSession({ role: 'admin', username: 'admin' });
 
     fetchMock
       .mockResolvedValueOnce(
@@ -77,8 +77,8 @@ describe('auth shell transitions', () => {
               accessToken: 'fresh-token',
               user: {
                 id: 'user-1',
-                username: 'doctor',
-                role: 'doctor',
+                username: 'admin',
+                role: 'admin',
               },
             },
           }),
@@ -91,20 +91,20 @@ describe('auth shell transitions', () => {
             success: true,
             data: {
               id: 'user-1',
-              username: 'doctor',
-              role: 'doctor',
+              username: 'admin',
+              role: 'admin',
             },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         ),
       );
 
-    renderApp(['/app/doctor/queue']);
+    renderApp(['/app/admin']);
 
     const shell = await screen.findByTestId('app-shell');
-    expect(shell).toHaveAttribute('data-role', 'doctor');
+    expect(shell).toHaveAttribute('data-role', 'admin');
     expect(shell).toHaveAttribute('data-auth-status', 'authenticated');
-    await screen.findByTestId('doctor-queue-unavailable-state');
+    await screen.findByTestId('admin-overview-unavailable-state');
 
     await waitFor(() => {
       expect(window.sessionStorage.getItem(STORAGE_KEY)).toContain('fresh-token');

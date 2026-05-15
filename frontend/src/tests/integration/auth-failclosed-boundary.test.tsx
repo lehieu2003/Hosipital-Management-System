@@ -24,12 +24,12 @@ describe('auth fail-closed boundary integration', () => {
     window.sessionStorage.clear();
   });
 
-  it('replays bootstrap exactly once after refresh recovery and lands the doctor shell', async () => {
+  it('replays bootstrap exactly once after refresh recovery and lands the protected shell', async () => {
     storeSession({
       accessToken: 'expired-token',
-      role: 'doctor',
-      userId: 'user-3',
-      username: 'doctor',
+      role: 'admin',
+      userId: 'user-1',
+      username: 'admin',
     });
 
     fetchMock
@@ -39,29 +39,29 @@ describe('auth fail-closed boundary integration', () => {
       .mockResolvedValueOnce(
         authSuccessResponse({
           accessToken: 'fresh-token',
-          role: 'doctor',
-          userId: 'user-3',
-          username: 'doctor',
+          role: 'admin',
+          userId: 'user-1',
+          username: 'admin',
         }),
       )
       .mockResolvedValueOnce(
         meSuccessResponse({
-          role: 'doctor',
-          userId: 'user-3',
-          username: 'doctor',
+          role: 'admin',
+          userId: 'user-1',
+          username: 'admin',
         }),
       );
 
-    renderApp({ initialEntries: ['/app/doctor/queue'] });
+    renderApp({ initialEntries: ['/app/admin'] });
 
     const shell = await screen.findByTestId('app-shell');
-    expect(shell).toHaveAttribute('data-role', 'doctor');
+    expect(shell).toHaveAttribute('data-role', 'admin');
     expect(shell).toHaveAttribute('data-auth-status', 'authenticated');
     expect(shell).toHaveAttribute('data-session-notice', 'none');
-    expect(screen.getByTestId('router-location')).toHaveAttribute('data-pathname', '/app/doctor/queue');
+    expect(screen.getByTestId('router-location')).toHaveAttribute('data-pathname', '/app/admin');
 
-    const queueState = await screen.findByTestId('doctor-queue-unavailable-state');
-    expect(queueState).toHaveAttribute('data-screen-code', 'CONTRACT_PENDING');
+    const adminState = await screen.findByTestId('admin-overview-unavailable-state');
+    expect(adminState).toHaveAttribute('data-screen-code', 'CONTRACT_PENDING');
 
     await waitFor(() => {
       expect(window.sessionStorage.getItem(STORAGE_KEY)).toContain('fresh-token');

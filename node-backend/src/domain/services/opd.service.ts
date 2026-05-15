@@ -5,7 +5,10 @@ import { ERROR_CODES } from '../../shared/constants/error-codes.js';
 import { HTTP_STATUS } from '../../shared/constants/http-status.js';
 import { AppError } from '../../shared/errors/app-error.js';
 import { logger } from '../../shared/utils/logger.js';
-import { opdRepository } from '../repositories/opd.repository.js';
+import {
+  opdRepository,
+  type OpdDoctorDirectoryRecord,
+} from '../repositories/opd.repository.js';
 
 export type CreatePatientInput = {
   fullName: string;
@@ -37,6 +40,8 @@ export type UpdateDoctorQueueAppointmentInput = {
   version: number;
   status: 'CHECKED_IN' | 'COMPLETED';
 };
+
+export type DoctorDirectoryEntry = Pick<OpdDoctorDirectoryRecord, 'id' | 'username'>;
 
 const DOCTOR_ALLOWED_STATUS_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
   [AppointmentStatus.SCHEDULED]: [AppointmentStatus.CHECKED_IN],
@@ -77,6 +82,42 @@ const ensureDoctorActor = (actor: AuthPrincipal) => {
 };
 
 class OpdService {
+  async listSchedulableDoctors(actor: AuthPrincipal) {
+    try {
+      const doctors = await opdRepository.findActiveDoctorDirectory();
+      const directory = doctors.map((doctor) => ({
+        id: doctor.id,
+        username: doctor.username,
+      }));
+
+      logger.info(
+        {
+          actorRole: actor.role,
+          actorUserId: actor.userId,
+          doctorIds: directory.map((doctor) => doctor.id),
+          doctorUsernames: directory.map((doctor) => doctor.username),
+          doctorCount: directory.length,
+        },
+        'opd_doctor_directory_read',
+      );
+
+      return directory;
+    } catch (error) {
+      if (error instanceof AppError && error.code === ERROR_CODES.opdUnavailable) {
+        logger.error(
+          {
+            actorRole: actor.role,
+            actorUserId: actor.userId,
+            errorCode: error.code,
+          },
+          'opd_doctor_directory_read_failed',
+        );
+      }
+
+      throw error;
+    }
+  }
+
   async getDoctorQueue(actor: AuthPrincipal) {
     ensureDoctorActor(actor);
 

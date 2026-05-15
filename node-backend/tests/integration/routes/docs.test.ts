@@ -76,6 +76,24 @@ describe('Swagger docs routes', () => {
       }),
     );
 
+    expect(response.body.paths['/doctors'].get).toEqual(
+      expect.objectContaining({
+        security: [{ bearerAuth: [] }],
+        responses: expect.objectContaining({
+          '200': expect.any(Object),
+          '401': expect.any(Object),
+          '403': expect.any(Object),
+          '503': expect.any(Object),
+        }),
+      }),
+    );
+
+    expect(response.body.components.schemas.DoctorDirectoryEntry).toEqual(
+      expect.objectContaining({
+        required: ['id', 'username'],
+      }),
+    );
+
     expect(response.body.paths['/doctor/queue'].get).toEqual(
       expect.objectContaining({
         security: [{ bearerAuth: [] }],

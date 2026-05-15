@@ -1,5 +1,6 @@
 import {
   AppointmentStatus,
+  UserRole,
   type Appointment,
   type Patient,
   type PatientGender,
@@ -40,6 +41,8 @@ export type UpdateAppointmentRecordInput = {
   status?: AppointmentStatus;
   notes?: string | null;
 };
+
+export type DoctorDirectoryRecord = Pick<User, 'id' | 'username' | 'role' | 'isActive'>;
 
 const ACTIVE_DOCTOR_QUEUE_STATUSES = [
   AppointmentStatus.SCHEDULED,
@@ -104,6 +107,47 @@ class OpdRepository {
     } catch (error) {
       return wrapOpdStoreError('find_user_by_id', error, {
         userId: id,
+      });
+    }
+  }
+
+  async findActiveDoctorDirectory() {
+    try {
+      const doctors = await db.user.findMany({
+        where: {
+          role: UserRole.DOCTOR,
+          isActive: true,
+        },
+        orderBy: [{ username: 'asc' }, { id: 'asc' }],
+        select: {
+          id: true,
+          username: true,
+          role: true,
+          isActive: true,
+        },
+      });
+
+      if (!Array.isArray(doctors)) {
+        throw new Error('Doctor directory lookup returned malformed payload');
+      }
+
+      for (const doctor of doctors) {
+        if (
+          !doctor ||
+          typeof doctor.id !== 'string' ||
+          typeof doctor.username !== 'string' ||
+          doctor.role !== UserRole.DOCTOR ||
+          doctor.isActive !== true
+        ) {
+          throw new Error('Doctor directory lookup returned malformed doctor principal');
+        }
+      }
+
+      return doctors;
+    } catch (error) {
+      return wrapOpdStoreError('find_active_doctor_directory', error, {
+        role: UserRole.DOCTOR,
+        isActive: true,
       });
     }
   }
@@ -277,3 +321,4 @@ export type OpdDoctorQueueRecord = Prisma.AppointmentGetPayload<{
     patient: true;
   };
 }>;
+export type OpdDoctorDirectoryRecord = DoctorDirectoryRecord;

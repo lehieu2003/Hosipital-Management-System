@@ -306,6 +306,38 @@ export const openApiV1Document = {
           },
         },
       },
+      DoctorDirectoryEntry: {
+        type: 'object',
+        required: ['id', 'username'],
+        properties: {
+          id: {
+            type: 'string',
+            example: 'user_1',
+          },
+          username: {
+            type: 'string',
+            example: 'doctor',
+          },
+        },
+        description:
+          'Read-only active doctor principal for scheduling discovery. The backend filters to active DOCTOR users so clients never infer or role-filter principals locally.',
+      },
+      DoctorDirectoryEnvelope: {
+        type: 'object',
+        required: ['success', 'data'],
+        properties: {
+          success: {
+            type: 'boolean',
+            enum: [true],
+          },
+          data: {
+            type: 'array',
+            items: {
+              $ref: '#/components/schemas/DoctorDirectoryEntry',
+            },
+          },
+        },
+      },
       CreateAppointmentRequest: {
         type: 'object',
         required: ['patientId', 'doctorUserId', 'scheduledAt'],
@@ -829,6 +861,63 @@ export const openApiV1Document = {
           },
           '503': {
             description: 'OPD persistence is temporarily unavailable.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/doctors': {
+      get: {
+        tags: ['Doctors'],
+        summary: 'List schedulable doctor principals for reception workflows',
+        description:
+          'Read-only active doctor directory for scheduling discovery. Access is limited to admin and receptionist principals, and lookup failures fail closed as OPD_UNAVAILABLE with no partial doctor list.',
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        responses: {
+          '200': {
+            description:
+              'Deterministically ordered active doctor principals only, sorted by username then id.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/DoctorDirectoryEnvelope',
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Bearer token is missing, invalid, or expired.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '403': {
+            description: 'Authenticated principal does not have scheduling privileges.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '503': {
+            description:
+              'Doctor directory lookup is temporarily unavailable or returned malformed data; no partial doctor list is exposed.',
             content: {
               'application/json': {
                 schema: {

@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Sparkle,
   Stethoscope,
+  X,
 } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
@@ -108,8 +109,12 @@ function roleLabel(role?: UserRole | 'anonymous') {
 export function MainLayout() {
   const { session, logout, authStatus, sessionNotice } = useAuth();
   const location = useLocation();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pageTitle = titles[location.pathname] ?? 'Hospital Dashboard';
+
+  function closeSidebarOnMobile() {
+    setIsSidebarOpen(false);
+  }
 
   return (
     <div
@@ -122,35 +127,58 @@ export function MainLayout() {
       data-session-notice={sessionNotice ?? 'none'}
       data-testid="app-shell"
     >
+      <div
+        aria-hidden="true"
+        className={cn(
+          'fixed inset-0 z-30 bg-slate-950/24 backdrop-blur-[1px] transition-opacity duration-300 lg:hidden',
+          isSidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
+        )}
+        onClick={closeSidebarOnMobile}
+      />
+
       <aside
         id="app-sidebar"
-        className="sidebar-surface border-r border-white/60 bg-white/35 backdrop-blur-xl lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden"
+        className={cn(
+          'sidebar-surface fixed inset-y-0 left-0 z-40 w-[86vw] max-w-[320px] border-r border-white/60 backdrop-blur-xl transition-transform duration-300 ease-out lg:sticky lg:top-0 lg:h-screen lg:w-auto lg:max-w-none lg:overflow-hidden lg:border-r',
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+        )}
       >
         <div className="flex h-full flex-col">
           <div
             className={cn(
               'flex h-[74px] items-center border-b border-white/60 transition-[padding] duration-300',
-              isSidebarOpen ? 'justify-between px-6' : 'justify-center px-3',
+              isSidebarOpen ? 'justify-between px-6' : 'justify-center px-3 lg:justify-center',
             )}
           >
             <div className="flex items-center gap-3">
               <div className="brand-mark flex size-10 items-center justify-center rounded-2xl shadow-sm">
                 <GalleryVerticalEnd className="size-5" />
               </div>
-              <div className={cn('space-y-0.5', !isSidebarOpen && 'hidden')}>
+              <div className={cn('space-y-0.5', !isSidebarOpen && 'hidden lg:hidden')}>
                 <span className="block text-sm font-semibold tracking-tight text-slate-950">
                   MediCore HMS
                 </span>
                 <span className="block text-xs text-slate-500">Clinical operations</span>
               </div>
             </div>
-            <ChevronDown className={cn('size-4 text-muted-foreground', !isSidebarOpen && 'hidden')} />
+            <div className="flex items-center gap-2">
+              <ChevronDown className={cn('size-4 text-muted-foreground', !isSidebarOpen && 'hidden lg:hidden')} />
+              <Button
+                aria-label="Close sidebar"
+                className="size-9 rounded-xl text-slate-500 hover:text-slate-900 lg:hidden"
+                onClick={closeSidebarOnMobile}
+                size="icon"
+                variant="ghost"
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
           </div>
 
           <div className={cn('min-h-0 flex-1 overflow-y-auto py-6', isSidebarOpen ? 'px-4' : 'px-3')}>
             <nav
               aria-label="Primary navigation"
-              className={cn(isSidebarOpen ? 'space-y-6' : 'space-y-4')}
+              className={cn(isSidebarOpen ? 'space-y-6' : 'space-y-4 lg:space-y-6')}
               data-testid="primary-navigation"
             >
               {navGroups.map((group) => {
@@ -167,7 +195,7 @@ export function MainLayout() {
                     <p
                       className={cn(
                         'px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400',
-                        !isSidebarOpen && 'sr-only',
+                        !isSidebarOpen && 'sr-only lg:not-sr-only',
                       )}
                     >
                       {group.label}
@@ -183,14 +211,15 @@ export function MainLayout() {
                             className={({ isActive }) =>
                               cn(
                                 navLinkClass(isActive),
-                                !isSidebarOpen && 'justify-center gap-0 px-0',
+                                !isSidebarOpen && 'justify-center gap-0 px-0 lg:justify-center lg:px-0',
                               )
                             }
+                            onClick={closeSidebarOnMobile}
                             title={!isSidebarOpen ? item.label : undefined}
                             to={item.to}
                           >
                             <Icon className="size-4 text-cyan-700/80 transition-colors group-hover:text-cyan-900" />
-                            <span className={cn(!isSidebarOpen && 'sr-only')}>{item.label}</span>
+                            <span className={cn(!isSidebarOpen && 'sr-only lg:sr-only')}>{item.label}</span>
                           </NavLink>
                         );
                       })}
@@ -201,13 +230,13 @@ export function MainLayout() {
             </nav>
           </div>
 
-          <div className={cn('border-t border-white/60 p-4', !isSidebarOpen && 'p-3')}>
-            <div className={cn('rounded-3xl bg-white/72 p-4 shadow-sm ring-1 ring-slate-200/70', !isSidebarOpen && 'p-2.5')}>
-              <div className={cn('flex items-center gap-3', !isSidebarOpen && 'justify-center')}>
+          <div className={cn('border-t border-white/60 p-4', !isSidebarOpen && 'p-3 lg:p-4')}>
+            <div className={cn('rounded-3xl bg-white/72 p-4 shadow-sm ring-1 ring-slate-200/70', !isSidebarOpen && 'p-2.5 lg:p-4')}>
+              <div className={cn('flex items-center gap-3', !isSidebarOpen && 'justify-center lg:justify-center')}>
                 <div className="brand-mark grid size-10 place-items-center rounded-2xl text-sm font-semibold shadow-sm">
                   {(session?.username ?? 'U').slice(0, 1).toUpperCase()}
                 </div>
-                <div className={cn('min-w-0 flex-1', !isSidebarOpen && 'hidden')}>
+                <div className={cn('min-w-0 flex-1', !isSidebarOpen && 'hidden lg:hidden')}>
                   <p className="truncate text-sm font-semibold text-slate-950">
                     {session?.username ?? 'anonymous'}
                   </p>
@@ -217,7 +246,7 @@ export function MainLayout() {
                 </div>
                 <Button
                   aria-label="Sign out"
-                  className={cn('size-9 rounded-xl text-slate-500 hover:text-slate-900', !isSidebarOpen && 'hidden')}
+                  className={cn('size-9 rounded-xl text-slate-500 hover:text-slate-900', !isSidebarOpen && 'hidden lg:hidden')}
                   onClick={() => void logout()}
                   size="icon"
                   variant="ghost"
@@ -230,7 +259,7 @@ export function MainLayout() {
                 <p
                   className={cn(
                     'mt-4 rounded-2xl border border-amber-300/50 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-900',
-                    !isSidebarOpen && 'hidden',
+                    !isSidebarOpen && 'hidden lg:hidden',
                   )}
                   data-testid="refresh-failed-banner"
                 >
@@ -244,7 +273,7 @@ export function MainLayout() {
 
       <div className="main-surface min-w-0">
         <header className="sticky top-0 z-20 border-b border-white/60 bg-white/78 backdrop-blur-xl">
-          <div className="flex h-[74px] items-center gap-4 px-5 lg:px-8">
+          <div className="flex h-[74px] items-center gap-4 px-4 sm:px-5 lg:px-8">
             <Button
               aria-controls="app-sidebar"
               aria-expanded={isSidebarOpen}
@@ -284,7 +313,7 @@ export function MainLayout() {
           </div>
         </header>
 
-        <main className="px-5 py-6 lg:px-8 lg:py-7">
+        <main className="px-4 py-5 sm:px-5 lg:px-8 lg:py-7">
           <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm text-slate-500">

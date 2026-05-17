@@ -5,13 +5,10 @@ import {
   CalendarRange,
   ChevronDown,
   CircleGauge,
-  Download,
   GalleryVerticalEnd,
   LayoutDashboard,
   LogOut,
-  Moon,
   PanelLeft,
-  Palette,
   Search,
   ShieldCheck,
   Sparkle,
@@ -85,11 +82,27 @@ const titles: Record<string, string> = {
 
 function navLinkClass(isActive: boolean) {
   return cn(
-    'group flex min-h-10 items-center gap-3 rounded-lg px-3 text-[15px] font-medium transition-[background-color,color,transform]',
+    'group flex min-h-11 items-center gap-3 rounded-2xl px-3.5 text-[15px] font-medium transition-[background-color,color,box-shadow]',
     isActive
-      ? 'bg-cyan-100 text-cyan-950 shadow-[inset_0_0_0_1px_rgb(8_145_178/0.12)]'
-      : 'text-slate-500 hover:bg-cyan-50 hover:text-cyan-950',
+      ? 'bg-white text-slate-950 shadow-[0_10px_24px_rgba(15,23,42,0.08),inset_0_0_0_1px_rgba(8,145,178,0.12)]'
+      : 'text-slate-500 hover:bg-white/70 hover:text-slate-900',
   );
+}
+
+function roleLabel(role?: UserRole | 'anonymous') {
+  if (role === 'admin') {
+    return 'Admin';
+  }
+
+  if (role === 'receptionist') {
+    return 'Reception';
+  }
+
+  if (role === 'doctor') {
+    return 'Doctor';
+  }
+
+  return 'Anonymous';
 }
 
 export function MainLayout() {
@@ -102,7 +115,7 @@ export function MainLayout() {
     <div
       className={cn(
         'medical-shell min-h-screen lg:grid lg:transition-[grid-template-columns] lg:duration-300 lg:ease-out',
-        isSidebarOpen ? 'lg:grid-cols-[320px_minmax(0,1fr)]' : 'lg:grid-cols-[88px_minmax(0,1fr)]',
+        isSidebarOpen ? 'lg:grid-cols-[292px_minmax(0,1fr)]' : 'lg:grid-cols-[92px_minmax(0,1fr)]',
       )}
       data-auth-status={authStatus}
       data-role={session?.role ?? 'anonymous'}
@@ -111,35 +124,33 @@ export function MainLayout() {
     >
       <aside
         id="app-sidebar"
-        className="sidebar-surface lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden"
+        className="sidebar-surface border-r border-white/60 bg-white/35 backdrop-blur-xl lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden"
       >
         <div className="flex h-full flex-col">
           <div
             className={cn(
-              'flex h-[70px] items-center transition-[padding] duration-300',
-              isSidebarOpen ? 'justify-between px-7' : 'justify-center px-3',
+              'flex h-[74px] items-center border-b border-white/60 transition-[padding] duration-300',
+              isSidebarOpen ? 'justify-between px-6' : 'justify-center px-3',
             )}
           >
             <div className="flex items-center gap-3">
-              <div className="brand-mark flex size-9 items-center justify-center rounded-xl">
+              <div className="brand-mark flex size-10 items-center justify-center rounded-2xl shadow-sm">
                 <GalleryVerticalEnd className="size-5" />
               </div>
-              <span
-                className={cn(
-                  'text-base font-bold tracking-tight text-slate-950 transition-opacity duration-200',
-                  !isSidebarOpen && 'hidden',
-                )}
-              >
-                MediCore HMS
-              </span>
+              <div className={cn('space-y-0.5', !isSidebarOpen && 'hidden')}>
+                <span className="block text-sm font-semibold tracking-tight text-slate-950">
+                  MediCore HMS
+                </span>
+                <span className="block text-xs text-slate-500">Clinical operations</span>
+              </div>
             </div>
             <ChevronDown className={cn('size-4 text-muted-foreground', !isSidebarOpen && 'hidden')} />
           </div>
 
-          <div className={cn('min-h-0 flex-1 overflow-y-auto py-6', isSidebarOpen ? 'px-5' : 'px-3')}>
+          <div className={cn('min-h-0 flex-1 overflow-y-auto py-6', isSidebarOpen ? 'px-4' : 'px-3')}>
             <nav
               aria-label="Primary navigation"
-              className={cn(isSidebarOpen ? 'space-y-7' : 'space-y-4')}
+              className={cn(isSidebarOpen ? 'space-y-6' : 'space-y-4')}
               data-testid="primary-navigation"
             >
               {navGroups.map((group) => {
@@ -152,16 +163,16 @@ export function MainLayout() {
                 }
 
                 return (
-                  <div key={group.label} className="space-y-2">
+                  <div key={group.label} className="space-y-2.5">
                     <p
                       className={cn(
-                        'px-1 text-sm font-medium text-cyan-700/60',
+                        'px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400',
                         !isSidebarOpen && 'sr-only',
                       )}
                     >
                       {group.label}
                     </p>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {visibleItems.map((item) => {
                         const Icon = item.icon;
 
@@ -178,7 +189,7 @@ export function MainLayout() {
                             title={!isSidebarOpen ? item.label : undefined}
                             to={item.to}
                           >
-                            <Icon className="size-4 text-cyan-700/70 transition-colors group-hover:text-cyan-950" />
+                            <Icon className="size-4 text-cyan-700/80 transition-colors group-hover:text-cyan-900" />
                             <span className={cn(!isSidebarOpen && 'sr-only')}>{item.label}</span>
                           </NavLink>
                         );
@@ -190,70 +201,55 @@ export function MainLayout() {
             </nav>
           </div>
 
-          <div className={cn('space-y-5 p-5', !isSidebarOpen && 'p-3')}>
-            <div
-              className={cn(
-                'rounded-2xl border border-white/70 bg-white/72 p-4 shadow-sm backdrop-blur',
-                !isSidebarOpen && 'hidden',
-              )}
-            >
-              <div className="space-y-2">
-                <h2 className="text-base font-bold">Unlock Everything</h2>
-                <p className="text-pretty text-sm leading-6 text-muted-foreground">
-                  Premium templates, audit views, and operational dashboards for every hospital
-                  workflow.
-                </p>
+          <div className={cn('border-t border-white/60 p-4', !isSidebarOpen && 'p-3')}>
+            <div className={cn('rounded-3xl bg-white/72 p-4 shadow-sm ring-1 ring-slate-200/70', !isSidebarOpen && 'p-2.5')}>
+              <div className={cn('flex items-center gap-3', !isSidebarOpen && 'justify-center')}>
+                <div className="brand-mark grid size-10 place-items-center rounded-2xl text-sm font-semibold shadow-sm">
+                  {(session?.username ?? 'U').slice(0, 1).toUpperCase()}
+                </div>
+                <div className={cn('min-w-0 flex-1', !isSidebarOpen && 'hidden')}>
+                  <p className="truncate text-sm font-semibold text-slate-950">
+                    {session?.username ?? 'anonymous'}
+                  </p>
+                  <p className="truncate text-xs uppercase tracking-[0.16em] text-slate-400">
+                    {roleLabel(session?.role ?? 'anonymous')}
+                  </p>
+                </div>
+                <Button
+                  aria-label="Sign out"
+                  className={cn('size-9 rounded-xl text-slate-500 hover:text-slate-900', !isSidebarOpen && 'hidden')}
+                  onClick={() => void logout()}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <LogOut className="size-4" />
+                </Button>
               </div>
-              <Button className="brand-button mt-4 h-11 w-full rounded-lg">
-                <span className="size-2 rounded-full bg-emerald-300" />
-                Get Full Access
-              </Button>
-            </div>
 
-            <div className={cn('flex items-center gap-3 px-1', !isSidebarOpen && 'justify-center px-0')}>
-              <div className="brand-mark grid size-10 place-items-center rounded-full text-sm font-semibold">
-                {(session?.username ?? 'U').slice(0, 1).toUpperCase()}
-              </div>
-              <div className={cn('min-w-0 flex-1', !isSidebarOpen && 'hidden')}>
-                <p className="truncate text-sm font-semibold text-slate-950">
-                  {session?.username ?? 'anonymous'}
+              {authStatus === 'refresh-failed' ? (
+                <p
+                  className={cn(
+                    'mt-4 rounded-2xl border border-amber-300/50 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-900',
+                    !isSidebarOpen && 'hidden',
+                  )}
+                  data-testid="refresh-failed-banner"
+                >
+                  Session refresh failed. Sign in again.
                 </p>
-                <p className="truncate text-xs text-muted-foreground">{session?.role ?? 'none'}</p>
-              </div>
-              <Button
-                aria-label="Sign out"
-                className={cn('size-9 rounded-lg', !isSidebarOpen && 'hidden')}
-                onClick={() => void logout()}
-                size="icon"
-                variant="ghost"
-              >
-                <LogOut className="size-4" />
-              </Button>
+              ) : null}
             </div>
-
-            {authStatus === 'refresh-failed' ? (
-              <p
-                className={cn(
-                  'rounded-xl border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-900',
-                  !isSidebarOpen && 'hidden',
-                )}
-                data-testid="refresh-failed-banner"
-              >
-                Session refresh failed. Sign in again.
-              </p>
-            ) : null}
           </div>
         </div>
       </aside>
 
       <div className="main-surface min-w-0">
-        <header className="sticky top-0 z-20 bg-white/86 shadow-[0_1px_18px_rgb(6_95_120/0.06)] backdrop-blur">
-          <div className="flex h-[70px] items-center gap-4 px-5 lg:px-8">
+        <header className="sticky top-0 z-20 border-b border-white/60 bg-white/78 backdrop-blur-xl">
+          <div className="flex h-[74px] items-center gap-4 px-5 lg:px-8">
             <Button
               aria-controls="app-sidebar"
               aria-expanded={isSidebarOpen}
               aria-label={isSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-              className="size-10 rounded-lg"
+              className="size-10 rounded-xl text-slate-500 hover:text-slate-900"
               onClick={() => setIsSidebarOpen((current) => !current)}
               size="icon"
               title={isSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
@@ -262,58 +258,52 @@ export function MainLayout() {
               <PanelLeft className="size-4" />
             </Button>
             <Separator className="hidden h-8 sm:block" orientation="vertical" />
-            <div className="relative hidden w-full max-w-[480px] sm:block">
-              <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative hidden w-full max-w-[420px] sm:block">
+              <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-slate-400" />
               <Input
                 aria-label="Search"
-                className="h-11 rounded-lg bg-white pr-14 pl-11 shadow-sm focus-visible:border-cyan-500 focus-visible:ring-cyan-500/20"
-                placeholder="Search..."
+                className="h-11 rounded-2xl border-white/70 bg-white/90 pr-14 pl-11 shadow-sm focus-visible:border-cyan-500 focus-visible:ring-cyan-500/20"
+                placeholder="Search patients, queues, or appointments"
               />
-              <kbd className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 rounded-md bg-cyan-50 px-2 py-1 text-xs font-semibold text-cyan-700">
+              <kbd className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 rounded-lg bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-slate-200">
                 ⌘ K
               </kbd>
             </div>
-            <div className="ml-auto flex items-center gap-2 sm:gap-4">
-              <Button className="hidden text-cyan-700 hover:bg-cyan-50 hover:text-cyan-800 md:inline-flex" variant="ghost">
+            <div className="ml-auto flex items-center gap-2 sm:gap-3">
+              <div className="hidden rounded-full bg-white/90 px-3 py-1.5 text-sm font-medium text-cyan-800 ring-1 ring-cyan-100 md:block">
                 Care Pro
-              </Button>
-              <Button aria-label="Notifications" className="relative size-10 rounded-lg" size="icon" variant="ghost">
+              </div>
+              <Button aria-label="Notifications" className="relative size-10 rounded-xl text-slate-500 hover:text-slate-900" size="icon" variant="ghost">
                 <Bell className="size-4" />
-                <span className="absolute top-2 right-2 size-2 rounded-full bg-rose-500" />
+                <span className="absolute top-2.5 right-2.5 size-2 rounded-full bg-rose-500" />
               </Button>
-              <Button aria-label="Theme" className="size-10 rounded-lg" size="icon" variant="ghost">
-                <Moon className="size-4" />
-              </Button>
-              <Button aria-label="Palette" className="size-10 rounded-lg" size="icon" variant="ghost">
-                <Palette className="size-4" />
-              </Button>
-              <Separator className="hidden h-8 md:block" orientation="vertical" />
-              <div className="brand-mark grid size-10 place-items-center rounded-full text-sm font-semibold ring-1 ring-cyan-700/10">
+              <div className="grid size-10 place-items-center rounded-2xl bg-white/88 text-sm font-semibold text-slate-700 ring-1 ring-slate-200/80 shadow-sm">
                 {(session?.username ?? 'U').slice(0, 1).toUpperCase()}
               </div>
             </div>
           </div>
         </header>
 
-        <main className="px-5 py-5 lg:px-8">
-          <div className="mb-5 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-              <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+        <main className="px-5 py-6 lg:px-8 lg:py-7">
+          <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-slate-500">
                 <Sparkle className="size-4" />
                 Live workspace
               </div>
-              <h1 className="text-balance text-3xl font-bold tracking-[-0.04em] text-slate-950">
-                {pageTitle}
-              </h1>
+              <div className="space-y-2">
+                <h1 className="text-balance text-3xl font-bold tracking-[-0.04em] text-slate-950">
+                  {pageTitle}
+                </h1>
+                <p className="max-w-2xl text-sm leading-6 text-slate-500">
+                  Role-aware operational surfaces with fail-closed behavior and stable diagnostics.
+                </p>
+              </div>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button className="h-11 justify-start rounded-lg bg-white shadow-sm" variant="outline">
+              <Button className="h-11 justify-start rounded-2xl border-white/80 bg-white/90 text-slate-700 shadow-sm" variant="outline">
                 <CalendarRange className="size-4" />
                 17 Apr 2026 - 14 May 2026
-              </Button>
-              <Button className="brand-button h-11 rounded-lg px-5">
-                <Download className="size-4" />
-                Download
               </Button>
             </div>
           </div>

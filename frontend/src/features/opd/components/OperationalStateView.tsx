@@ -4,14 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
-import type { OperationalFoundation, OperationalScreenId } from '../lib/foundations';
+import type { OperationalFoundation } from '../lib/foundations';
 
 type OperationalStateViewProps = {
   description: string;
   foundation?: OperationalFoundation;
   isLoading: boolean;
   roleLabel: string;
-  screenId: OperationalScreenId;
+  screenId: OperationalFoundation['screenId'];
   title: string;
 };
 
@@ -56,55 +56,64 @@ export function OperationalStateView({
   title,
 }: OperationalStateViewProps) {
   return (
-    <section className="space-y-5" data-testid={`${screenId}-page`}>
-      <div className="dashboard-card p-8">
-        <Badge className="brand-soft rounded-lg" variant="secondary">
-          {roleLabel}
-        </Badge>
-        <h2 className="text-balance mt-5 text-3xl font-bold tracking-[-0.04em]">{title}</h2>
-        <p className="text-pretty mt-3 max-w-3xl text-muted-foreground">{description}</p>
+    <section className="space-y-6" data-testid={`${screenId}-page`}>
+      <div className="dashboard-card p-8 lg:p-10">
+        <div className="flex flex-wrap items-center gap-3">
+          <Badge className="brand-soft rounded-full px-3 py-1" variant="secondary">
+            {roleLabel} workspace
+          </Badge>
+          {foundation ? (
+            <Badge className="rounded-full border-slate-200 bg-white px-3 py-1 text-slate-700" variant="outline">
+              {foundation.code}
+            </Badge>
+          ) : null}
+        </div>
+        <div className="mt-6 max-w-4xl space-y-3">
+          <h2 className="text-balance text-3xl font-bold tracking-[-0.04em] text-slate-950">{title}</h2>
+          <p className="text-pretty text-base leading-7 text-slate-600">{description}</p>
+        </div>
       </div>
 
       {isLoading ? (
-        <Card className="dashboard-card border-border" data-testid={`${screenId}-loading-state`}>
-          <CardHeader className="space-y-4">
-            <div className="flex size-11 items-center justify-center rounded-xl bg-cyan-50 text-cyan-700">
+        <Card className="dashboard-card rounded-[30px] border-border" data-testid={`${screenId}-loading-state`}>
+          <CardHeader className="space-y-4 pb-4">
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700 shadow-sm">
               <RefreshCw className="size-5 animate-spin" />
             </div>
             <div className="space-y-2">
-              <CardTitle>Loading operational boundary</CardTitle>
+              <CardTitle className="text-xl">Loading operational boundary</CardTitle>
               <p className="text-sm leading-6 text-muted-foreground">
                 Requesting the current screen state before any operational data is rendered.
               </p>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <Skeleton className="h-4 w-1/2" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
+          <CardContent className="space-y-4">
+            <Skeleton className="h-4 w-1/2 rounded-full" />
+            <Skeleton className="h-4 w-full rounded-full" />
+            <Skeleton className="h-4 w-5/6 rounded-full" />
           </CardContent>
         </Card>
       ) : foundation ? (
         <Card
-          className={`dashboard-card ${statusTone(foundation.status)}`}
+          className={`dashboard-card rounded-[30px] ${statusTone(foundation.status)}`}
           data-screen-code={foundation.code}
           data-screen-status={foundation.status}
           data-testid={`${screenId}-${foundation.status}-state`}
         >
-          <CardHeader className="space-y-4">
-            <div className="flex size-11 items-center justify-center rounded-xl bg-white/80 shadow-sm">
+          <CardHeader className="space-y-4 pb-4">
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-white/85 shadow-sm">
               {(() => {
                 const Icon = statusIcon(foundation.status);
                 return <Icon className="size-5" />;
               })()}
             </div>
             <div className="space-y-2">
-              <CardTitle>{foundation.title}</CardTitle>
+              <CardTitle className="text-xl">{foundation.title}</CardTitle>
               <p className="text-sm leading-6 opacity-90">{foundation.description}</p>
             </div>
           </CardHeader>
           <CardContent className="grid gap-5 xl:grid-cols-[1fr_1fr]">
-            <div className="rounded-2xl border border-current/10 bg-white/70 p-5">
+            <div className="rounded-3xl border border-current/10 bg-white/75 p-5">
               <p className="text-sm font-semibold">Planned capabilities</p>
               <ul className="mt-3 space-y-2 text-sm leading-6 opacity-90">
                 {foundation.capabilities.map((capability) => (
@@ -112,7 +121,7 @@ export function OperationalStateView({
                 ))}
               </ul>
             </div>
-            <div className="rounded-2xl border border-current/10 bg-white/70 p-5">
+            <div className="rounded-3xl border border-current/10 bg-white/75 p-5">
               <p className="text-sm font-semibold">Diagnostics</p>
               <ul className="mt-3 space-y-2 text-sm leading-6 opacity-90">
                 {foundation.diagnostics.map((diagnostic) => (

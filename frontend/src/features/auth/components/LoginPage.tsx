@@ -37,22 +37,22 @@ type LocationState = {
 
 const roleCards = [
   {
-    copy: 'Staffing boundaries, department controls, and admin-only settings.',
+    copy: 'Administrative boundaries, staffing controls, and role-protected oversight.',
     icon: ShieldCheck,
     label: 'Admin',
-    metric: '98.2%',
+    metric: 'Secure',
   },
   {
-    copy: 'Patient intake, appointment booking, and slot availability.',
+    copy: 'Patient intake, appointment booking, and doctor directory scheduling.',
     icon: CalendarClock,
     label: 'Reception',
-    metric: '312',
+    metric: 'Live',
   },
   {
-    copy: 'Live queue polling, refresh recovery, and consultations.',
+    copy: 'Queue progression, refresh recovery, and visit lifecycle updates.',
     icon: Stethoscope,
     label: 'Doctor',
-    metric: '42',
+    metric: 'Ready',
   },
 ];
 
@@ -148,29 +148,35 @@ export function LoginPage() {
       data-session-notice={reason ?? 'none'}
       data-testid="login-page"
     >
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-7xl gap-5 xl:grid-cols-[minmax(0,1.25fr)_440px]">
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-7xl gap-5 xl:grid-cols-[minmax(0,1.15fr)_460px]">
         <section className="dashboard-card overflow-hidden p-0">
-          <div className="flex h-[70px] items-center justify-between border-b border-border px-7">
+          <div className="flex h-[74px] items-center justify-between border-b border-border px-6 lg:px-8">
             <div className="flex items-center gap-3">
-              <div className="brand-mark flex size-9 items-center justify-center rounded-xl">
+              <div className="brand-mark flex size-10 items-center justify-center rounded-2xl shadow-sm">
                 <GalleryVerticalEnd className="size-5" />
               </div>
-              <span className="text-base font-bold tracking-tight text-slate-950">MediCore HMS</span>
+              <div className="space-y-0.5">
+                <span className="block text-sm font-semibold tracking-tight text-slate-950">MediCore HMS</span>
+                <span className="block text-xs text-slate-500">Clinical operations</span>
+              </div>
             </div>
-            <Badge className="brand-soft rounded-lg" variant="secondary">
+            <Badge className="rounded-full px-3 py-1" variant="secondary">
               OPD frontline
             </Badge>
           </div>
 
-          <div className="grid gap-6 p-7 lg:grid-cols-[1fr_0.75fr] lg:p-10">
+          <div className="grid gap-8 p-7 lg:grid-cols-[minmax(0,1fr)_340px] lg:p-10 xl:p-12">
             <div className="space-y-8">
               <div className="max-w-3xl space-y-4">
+                <Badge className="rounded-full px-3 py-1" variant="outline">
+                  Role-aware access
+                </Badge>
                 <h1 className="text-balance text-5xl font-bold tracking-[-0.06em] text-slate-950">
-                  Hospital Management UI runtime
+                  Hospital operations, without ambiguous access.
                 </h1>
                 <p className="text-pretty max-w-2xl text-lg leading-8 text-muted-foreground">
-                  Sign in with current staff accounts to verify role-aware routing, guarded access,
-                  and fail-closed authentication before operational modules expand.
+                  Sign in with the current staff accounts to verify routing, guarded workflows, and
+                  fail-closed authentication before entering operational screens.
                 </p>
               </div>
 
@@ -179,14 +185,19 @@ export function LoginPage() {
                   const Icon = card.icon;
 
                   return (
-                    <div key={card.label} className="rounded-2xl border border-cyan-100 bg-white p-5 shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <div className="flex size-10 items-center justify-center rounded-xl bg-cyan-50 text-cyan-700">
+                    <div
+                      key={card.label}
+                      className="rounded-3xl border border-cyan-100/80 bg-white/88 p-5 shadow-sm ring-1 ring-white/60"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex size-10 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
                           <Icon className="size-4" />
                         </div>
-                        <p className="tabular text-2xl font-bold tracking-[-0.05em] text-cyan-700">{card.metric}</p>
+                        <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                          {card.metric}
+                        </span>
                       </div>
-                      <p className="mt-5 font-semibold">{card.label}</p>
+                      <p className="mt-5 text-base font-semibold text-slate-950">{card.label}</p>
                       <p className="text-pretty mt-2 text-sm leading-6 text-muted-foreground">{card.copy}</p>
                     </div>
                   );
@@ -194,34 +205,45 @@ export function LoginPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-cyan-100 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-bold">System readiness</p>
-                  <p className="text-sm text-muted-foreground">Authentication boundary</p>
-                </div>
-                <Activity className="size-5 text-muted-foreground" />
-              </div>
-              <div className="mt-8 flex h-[260px] items-end justify-between gap-3">
-                {[58, 76, 62, 84, 48, 71, 54].map((height, index) => (
-                  <div key={`${height}-${index}`} className="flex flex-1 flex-col items-center gap-3">
-                    <div className="flex h-[210px] w-full items-end">
-                      <div
-                        className="w-full rounded-t-xl rounded-b-lg bg-cyan-600"
-                        style={{ height: `${height}%` }}
-                      />
+            <div className="rounded-[32px] border border-cyan-100/80 bg-white/88 p-6 shadow-sm ring-1 ring-white/70 lg:p-7">
+              <div className="space-y-5">
+                <div className="rounded-3xl border border-slate-200/80 bg-slate-50/85 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-950">System readiness</p>
+                      <p className="text-sm text-muted-foreground">Authentication boundary</p>
                     </div>
-                    <span className="text-xs text-muted-foreground">{index + 1}</span>
+                    <Activity className="size-5 text-cyan-700" />
                   </div>
-                ))}
+                  <div className="mt-5 grid gap-3">
+                    <ReadinessRow label="Role-aware routing" value="Verified" />
+                    <ReadinessRow label="Refresh replay" value="Fail-closed" />
+                    <ReadinessRow label="Operational shells" value="Protected" />
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-cyan-100/80 bg-cyan-50/65 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex size-10 items-center justify-center rounded-2xl bg-white text-cyan-700 shadow-sm">
+                      <Activity className="size-4" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="text-sm font-semibold text-slate-950">Fail-closed verification note</p>
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        If session recovery fails, the UI surfaces the problem instead of pretending
+                        operational access is still safe.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        <Card className="dashboard-card justify-center border-border bg-white py-7">
+        <Card className="dashboard-card justify-center border-border bg-white/92 py-7">
           <CardHeader className="space-y-3">
-            <Badge className="rounded-lg" variant="secondary">
+            <Badge className="rounded-full px-3 py-1" variant="secondary">
               Sign in
             </Badge>
             <div className="space-y-2">
@@ -244,7 +266,7 @@ export function LoginPage() {
                 </label>
                 <Input
                   autoComplete="username"
-                  className="h-11 rounded-lg"
+                  className="h-11 rounded-xl"
                   data-testid="username-input"
                   id="username"
                   name="username"
@@ -260,7 +282,7 @@ export function LoginPage() {
                 </label>
                 <Input
                   autoComplete="current-password"
-                  className="h-11 rounded-lg"
+                  className="h-11 rounded-xl"
                   data-testid="password-input"
                   id="password"
                   name="password"
@@ -281,7 +303,7 @@ export function LoginPage() {
 
               <Button
                 aria-busy={isSubmitting}
-                className="brand-button h-11 w-full rounded-lg"
+                className="brand-button h-11 w-full rounded-xl"
                 data-testid="login-submit-button"
                 disabled={isSubmitting}
                 type="submit"
@@ -293,23 +315,26 @@ export function LoginPage() {
 
             <Separator />
 
-            <div className="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-4">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex size-9 items-center justify-center rounded-xl bg-white text-cyan-700 shadow-sm">
-                  <Activity className="size-4" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold">Fail-closed verification note</p>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    If session recovery fails, the UI surfaces the problem instead of pretending
-                    operational access is still safe.
-                  </p>
-                </div>
-              </div>
+            <div className="rounded-3xl border border-slate-200/80 bg-slate-50/80 p-4">
+              <p className="text-sm font-semibold text-slate-950">Current access model</p>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
+                <li>• Admin, receptionist, and doctor routes resolve to different protected homes.</li>
+                <li>• Invalid credentials stay machine-readable at the login boundary.</li>
+                <li>• Refresh failures route back here instead of leaking access.</li>
+              </ul>
             </div>
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function ReadinessRow(props: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl bg-white/85 px-3 py-3 text-sm shadow-sm ring-1 ring-white/70">
+      <span className="text-slate-500">{props.label}</span>
+      <span className="font-semibold text-slate-950">{props.value}</span>
     </div>
   );
 }

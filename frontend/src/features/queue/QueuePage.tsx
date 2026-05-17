@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { OperationalStateView } from '@/features/opd/components/OperationalStateView';
 
@@ -21,6 +20,8 @@ import {
   useDoctorQueueQuery,
   useUpdateDoctorQueueAppointmentMutation,
 } from './hooks';
+import { DoctorQueueCard } from './components/doctor-queue-card';
+import { QueueStateCard } from './components/queue-state-card';
 
 export function QueuePage() {
   const queueQuery = useDoctorQueueQuery();
@@ -82,57 +83,63 @@ export function QueuePage() {
   const activeMutationAppointmentId = updateMutation.variables?.appointmentId ?? null;
 
   return (
-    <section className="space-y-5" data-testid="doctor-queue-page">
-      <div className="dashboard-card p-8">
+    <section className="space-y-6" data-testid="doctor-queue-page">
+      <div className="dashboard-card p-8 lg:p-10">
         <div className="flex flex-wrap items-center gap-3">
-          <Badge className="brand-soft rounded-lg" variant="secondary">
-            Doctor
+          <Badge className="brand-soft rounded-full px-3 py-1" variant="secondary">
+            Doctor workspace
           </Badge>
           <Badge
-            className="rounded-lg"
+            className="rounded-full border-slate-200 bg-white px-3 py-1 text-slate-700"
             data-testid="doctor-queue-polling-badge"
             variant="outline"
           >
             Polling every 15s
           </Badge>
+          <Badge className="rounded-full border-slate-200 bg-white px-3 py-1 text-slate-700" variant="outline">
+            {queue.length} active {queue.length === 1 ? 'visit' : 'visits'}
+          </Badge>
           {queueQuery.isFetching ? (
             <Badge
-              className="rounded-lg border-cyan-200 bg-cyan-50 text-cyan-900"
+              className="rounded-full border-cyan-200 bg-cyan-50 px-3 py-1 text-cyan-900"
               data-testid="doctor-queue-refreshing-badge"
               variant="outline"
             >
-              <RefreshCw className="mr-1 size-3.5 animate-spin" />
+              <RefreshCw className="size-3.5 animate-spin" />
               Refreshing
             </Badge>
           ) : null}
         </div>
-        <h2 className="mt-5 text-3xl font-bold tracking-[-0.04em]">Queue workspace</h2>
-        <p className="mt-3 max-w-3xl text-muted-foreground">
-          Review the live active queue, then advance each appointment through check-in and visit
-          completion with explicit fail-closed states for conflicts, forbidden writes, and backend
-          outages.
-        </p>
+        <div className="mt-6 max-w-4xl space-y-3">
+          <h2 className="text-balance text-3xl font-bold tracking-[-0.04em] text-slate-950">
+            Queue workspace
+          </h2>
+          <p className="text-pretty text-base leading-7 text-slate-600">
+            Review the live queue, move each patient through check-in and visit completion, and
+            keep conflict or outage states explicit instead of hiding operational risk.
+          </p>
+        </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
-        <Card className="dashboard-card border-border">
-          <CardHeader className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-cyan-50 text-cyan-700">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_360px] xl:items-start">
+        <Card className="dashboard-card overflow-hidden border-border rounded-[30px]">
+          <CardHeader className="gap-4 border-b border-slate-200/70 pb-6">
+            <div className="flex flex-wrap items-start gap-4">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700 shadow-sm">
                 <ClipboardList className="size-5" />
               </div>
-              <div>
-                <CardTitle>Active queue</CardTitle>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  The backend remains authoritative for queue ownership, ordering, and lifecycle
-                  transitions.
+              <div className="min-w-0 flex-1 space-y-2">
+                <CardTitle className="text-xl">Active queue</CardTitle>
+                <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                  Queue ownership, ordering, and lifecycle state remain backend-authoritative.
+                  The UI only renders what the live Node contract can prove.
                 </p>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-5 lg:p-6">
             {boundaryState.status === 'empty' ? (
-              <StateCard
+              <QueueStateCard
                 code={boundaryState.code}
                 description={boundaryState.description}
                 diagnostics={boundaryState.diagnostics}
@@ -143,73 +150,29 @@ export function QueuePage() {
                 tone="border-slate-200 bg-slate-50/80 text-slate-950"
               />
             ) : (
-              <div className="space-y-4" data-testid="doctor-queue-list">
+              <div className="space-y-5" data-testid="doctor-queue-list">
                 {queue.map((appointment) => {
                   const action = nextActionForAppointment(appointment);
                   const isUpdating =
                     updateMutation.isPending && activeMutationAppointmentId === appointment.id;
 
                   return (
-                    <Card
-                      className="border-border rounded-3xl"
-                      data-appointment-id={appointment.id}
-                      data-appointment-status={appointment.status}
-                      data-appointment-version={appointment.version}
-                      data-testid={`doctor-queue-item-${appointment.id}`}
+                    <DoctorQueueCard
+                      action={action}
+                      appointment={appointment}
+                      disableAction={updateMutation.isPending}
+                      isUpdating={isUpdating}
                       key={appointment.id}
-                    >
-                      <CardContent className="grid gap-5 p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-                        <div className="space-y-4">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <h3 className="text-lg font-semibold">{appointment.patient.fullName}</h3>
-                            <Badge
-                              className="rounded-lg"
-                              data-testid={`doctor-queue-status-${appointment.id}`}
-                              variant="outline"
-                            >
-                              {formatStatusLabel(appointment.status)}
-                            </Badge>
-                          </div>
-                          <dl className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
-                            <QueueFact label="Registration" value={appointment.patient.registrationNumber} />
-                            <QueueFact label="Phone" value={appointment.patient.primaryPhone} />
-                            <QueueFact label="Scheduled for" value={formatDateTime(appointment.scheduledAt)} />
-                            <QueueFact label="Visit length" value={`${appointment.durationMinutes} minutes`} />
-                            <QueueFact label="Queue version" value={String(appointment.version)} valueTestId={`doctor-queue-version-${appointment.id}`} />
-                            <QueueFact label="Patient ID" value={appointment.patient.id} />
-                          </dl>
-                        </div>
-
-                        <div className="flex min-w-56 flex-col gap-3">
-                          <Button
-                            aria-busy={isUpdating}
-                            className="brand-button h-11 rounded-lg px-5"
-                            data-testid={action.testId}
-                            disabled={isUpdating || updateMutation.isPending}
-                            onClick={() => {
-                              void updateMutation.mutateAsync({
-                                appointmentId: appointment.id,
-                                status: action.nextStatus,
-                                version: appointment.version,
-                              }).catch(() => undefined);
-                            }}
-                            type="button"
-                          >
-                            {isUpdating ? (
-                              <>
-                                Updating...
-                                <LoaderCircle className="size-4 animate-spin" />
-                              </>
-                            ) : (
-                              action.label
-                            )}
-                          </Button>
-                          <p className="text-sm leading-6 text-muted-foreground" data-testid={`doctor-queue-next-step-${appointment.id}`}>
-                            {action.description}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
+                      onAdvance={() => {
+                        void updateMutation
+                          .mutateAsync({
+                            appointmentId: appointment.id,
+                            status: action.nextStatus,
+                            version: appointment.version,
+                          })
+                          .catch(() => undefined);
+                      }}
+                    />
                   );
                 })}
               </div>
@@ -217,8 +180,8 @@ export function QueuePage() {
           </CardContent>
         </Card>
 
-        <div className="space-y-5">
-          <StateCard
+        <div className="space-y-6">
+          <QueueStateCard
             code={actionState.code}
             description={actionState.description}
             diagnostics={actionState.diagnostics}
@@ -229,34 +192,28 @@ export function QueuePage() {
             tone={stateTone(actionState.status)}
           >
             {updateMutation.data ? (
-              <dl className="grid gap-3 rounded-2xl border border-current/10 bg-white/80 p-5 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="font-medium">Patient</dt>
-                  <dd data-testid="doctor-queue-last-patient">{updateMutation.data.patient.fullName}</dd>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="font-medium">Backend status</dt>
-                  <dd data-testid="doctor-queue-last-status">{updateMutation.data.status}</dd>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="font-medium">Updated version</dt>
-                  <dd data-testid="doctor-queue-last-version">{updateMutation.data.version}</dd>
-                </div>
+              <dl className="grid gap-3 rounded-3xl border border-current/10 bg-white/85 p-5 text-sm">
+                <SummaryRow label="Patient" testId="doctor-queue-last-patient" value={updateMutation.data.patient.fullName} />
+                <SummaryRow label="Backend status" testId="doctor-queue-last-status" value={updateMutation.data.status} />
+                <SummaryRow label="Updated version" testId="doctor-queue-last-version" value={String(updateMutation.data.version)} />
               </dl>
             ) : null}
-          </StateCard>
+          </QueueStateCard>
 
-          <Card className="dashboard-card border-border">
-            <CardHeader>
-              <CardTitle className="text-base">Queue guarantees</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
-              <p data-testid="doctor-queue-version-note">
-                Every queue action sends the current
-                <code className="mx-1 rounded bg-slate-100 px-1 py-0.5 text-slate-900">version</code>
-                from the rendered appointment card.
+          <Card className="dashboard-card border-border rounded-[30px]">
+            <CardHeader className="gap-2 pb-4">
+              <CardTitle className="text-lg">Queue guarantees</CardTitle>
+              <p className="text-sm leading-6 text-muted-foreground">
+                The queue never invents state when the backend cannot prove it.
               </p>
-              <ul className="space-y-2">
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm leading-6 text-muted-foreground">
+              <p data-testid="doctor-queue-version-note">
+                Every queue action sends the rendered
+                <code className="mx-1 rounded bg-slate-100 px-1.5 py-0.5 text-slate-900">version</code>
+                for that appointment.
+              </p>
+              <ul className="space-y-3">
                 <li>• Queue reads never fall back to placeholder or stale mock data after failure.</li>
                 <li>• Mutation success forces an explicit queue invalidation before the next poll.</li>
                 <li>• Focus refetch remains enabled through the shared React Query client.</li>
@@ -269,58 +226,14 @@ export function QueuePage() {
   );
 }
 
-function QueueFact(props: { label: string; value: string; valueTestId?: string }) {
+function SummaryRow(props: { label: string; testId: string; value: string }) {
   return (
-    <div className="space-y-1">
-      <dt className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground/80">
-        {props.label}
-      </dt>
-      <dd className="text-sm text-foreground" data-testid={props.valueTestId}>
+    <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 pb-3 last:border-b-0 last:pb-0">
+      <dt className="font-medium">{props.label}</dt>
+      <dd className="text-right [font-variant-numeric:tabular-nums]" data-testid={props.testId}>
         {props.value}
       </dd>
     </div>
-  );
-}
-
-function StateCard(props: {
-  children?: React.ReactNode;
-  code: string;
-  description: string;
-  diagnostics: string[];
-  icon: React.ReactNode;
-  status: string;
-  testId: string;
-  title: string;
-  tone: string;
-}) {
-  return (
-    <Card
-      className={`dashboard-card ${props.tone}`}
-      data-screen-code={props.code}
-      data-screen-status={props.status}
-      data-testid={props.testId}
-    >
-      <CardHeader className="space-y-4">
-        <div className="flex size-11 items-center justify-center rounded-xl bg-white/80 shadow-sm">
-          {props.icon}
-        </div>
-        <div className="space-y-2">
-          <CardTitle>{props.title}</CardTitle>
-          <p className="text-sm leading-6 opacity-90">{props.description}</p>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        {props.children}
-        <div className="rounded-2xl border border-current/10 bg-white/70 p-5">
-          <p className="text-sm font-semibold">Diagnostics</p>
-          <ul className="mt-3 space-y-2 text-sm leading-6 opacity-90">
-            {props.diagnostics.map((diagnostic) => (
-              <li key={diagnostic}>• {diagnostic}</li>
-            ))}
-          </ul>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -384,21 +297,4 @@ function nextActionForAppointment(appointment: DoctorQueueAppointment) {
     nextStatus: 'COMPLETED' as const,
     testId: `queue-action-complete-${appointment.id}`,
   };
-}
-
-function formatStatusLabel(status: DoctorQueueAppointment['status']) {
-  return status === 'SCHEDULED' ? 'Scheduled' : 'Checked in';
-}
-
-function formatDateTime(value: string) {
-  const parsed = new Date(value);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(parsed);
 }

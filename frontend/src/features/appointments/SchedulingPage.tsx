@@ -119,33 +119,33 @@ export function SchedulingPage() {
   const readyDoctors = doctorsQuery.data ?? [];
 
   return (
-    <section className="space-y-6" data-testid="reception-scheduling-page">
-      <div className="dashboard-card p-8 lg:p-10">
-        <div className="flex flex-wrap items-center gap-3">
-          <Badge className="brand-soft rounded-full px-3 py-1" variant="secondary">
+    <section className="space-y-5 sm:space-y-6" data-testid="reception-scheduling-page">
+      <div className="dashboard-card p-6 sm:p-8 lg:p-10">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+          <Badge className="brand-soft rounded-full px-3 py-1 text-[11px] sm:text-xs" variant="secondary">
             Reception workspace
           </Badge>
-          <Badge className="rounded-full border-slate-200 bg-white px-3 py-1 text-slate-700" variant="outline">
+          <Badge className="rounded-full border-slate-200 bg-white px-3 py-1 text-[11px] text-slate-700 sm:text-xs" variant="outline">
             {readyDoctors.length} schedulable {readyDoctors.length === 1 ? 'doctor' : 'doctors'}
           </Badge>
-          <Badge className="rounded-full border-slate-200 bg-white px-3 py-1 text-slate-700" variant="outline">
+          <Badge className="rounded-full border-slate-200 bg-white px-3 py-1 text-[11px] text-slate-700 sm:text-xs" variant="outline">
             Patient → appointment
           </Badge>
         </div>
-        <div className="mt-6 max-w-4xl space-y-3">
-          <h2 className="text-balance text-3xl font-bold tracking-[-0.04em] text-slate-950">
+        <div className="mt-5 max-w-4xl space-y-3 sm:mt-6">
+          <h2 className="text-balance text-2xl font-bold tracking-[-0.04em] text-slate-950 sm:text-3xl">
             Scheduling workspace
           </h2>
-          <p className="text-pretty text-base leading-7 text-slate-600">
+          <p className="text-pretty text-[15px] leading-7 text-slate-600 sm:text-base">
             Register the patient first, then book the visit against the live Node backend with
             explicit states for directory lookup, registration, and booking outcomes.
           </p>
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_360px] xl:items-start">
-        <Card className="dashboard-card overflow-hidden border-border rounded-[30px]">
-          <CardHeader className="gap-4 border-b border-slate-200/70 pb-6">
+      <div className="grid gap-5 sm:gap-6 xl:grid-cols-[minmax(0,1.45fr)_360px] xl:items-start">
+        <Card className="dashboard-card overflow-hidden border-border rounded-[28px] sm:rounded-[30px]">
+          <CardHeader className="gap-4 border-b border-slate-200/70 pb-5 sm:pb-6">
             <div className="flex flex-wrap items-start gap-4">
               <div className="flex size-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700 shadow-sm">
                 <CalendarClock className="size-5" />
@@ -159,8 +159,8 @@ export function SchedulingPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-5 lg:p-6">
-            <form className="space-y-7" data-testid="reception-scheduling-form" onSubmit={(event) => void handleSubmit(event)}>
+          <CardContent className="p-4 sm:p-5 lg:p-6">
+            <form className="space-y-6 sm:space-y-7" data-testid="reception-scheduling-form" onSubmit={(event) => void handleSubmit(event)}>
               <div className="space-y-4">
                 <SectionHeading
                   eyebrow="Patient intake"
@@ -213,7 +213,7 @@ export function SchedulingPage() {
                 </SchedulingField>
               </div>
 
-              <div className="space-y-4 rounded-[28px] border border-slate-200/80 bg-slate-50/75 p-5 lg:p-6">
+              <div className="space-y-4 rounded-[24px] border border-slate-200/80 bg-slate-50/75 p-4 sm:rounded-[28px] sm:p-5 lg:p-6">
                 <SectionHeading
                   eyebrow="Booking"
                   title="Appointment details"
@@ -273,15 +273,15 @@ export function SchedulingPage() {
                 </Alert>
               ) : null}
 
-              <div className="flex flex-wrap items-center justify-between gap-4 rounded-[28px] border border-slate-200/80 bg-white/70 p-4">
+              <div className="flex flex-col gap-4 rounded-[24px] border border-slate-200/80 bg-white/70 p-4 sm:rounded-[28px] sm:p-4 lg:flex-row lg:items-center lg:justify-between">
                 <p className="max-w-xl text-sm leading-6 text-slate-500">
                   Submit creates the patient first, then books the appointment. If either live step
                   fails, the workflow stays explicit and fail-closed.
                 </p>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                   <Button
                     aria-busy={scheduleMutation.isPending}
-                    className="brand-button h-11 rounded-xl px-5"
+                    className="brand-button h-11 w-full rounded-xl px-5 sm:w-auto"
                     data-testid="schedule-submit-button"
                     disabled={scheduleMutation.isPending || boundaryState.status === 'empty'}
                     type="submit"
@@ -295,7 +295,7 @@ export function SchedulingPage() {
                       'Register and schedule'
                     )}
                   </Button>
-                  <Button className="h-11 rounded-xl px-5" data-testid="schedule-reset-button" onClick={handleReset} type="button" variant="outline">
+                  <Button className="h-11 w-full rounded-xl px-5 sm:w-auto" data-testid="schedule-reset-button" onClick={handleReset} type="button" variant="outline">
                     Reset form
                   </Button>
                 </div>
@@ -337,7 +337,7 @@ export function SchedulingPage() {
             ) : null}
           </SchedulingStateCard>
 
-          <Card className="dashboard-card border-border rounded-[30px]">
+          <Card className="dashboard-card border-border rounded-[28px] sm:rounded-[30px]">
             <CardHeader className="gap-2 pb-4">
               <CardTitle className="text-lg">Workflow guarantees</CardTitle>
               <p className="text-sm leading-6 text-muted-foreground">

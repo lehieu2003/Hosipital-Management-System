@@ -7,6 +7,7 @@ const optionalNullableTrimmedString = (max: number) => trimmedString(max).nullab
 const entityId = trimmedString(191);
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD');
 const isoDateTime = z.string().datetime({ offset: true });
+const departmentName = trimmedString(120);
 
 export const createPatientSchema = z.object({
   fullName: trimmedString(255),
@@ -16,6 +17,22 @@ export const createPatientSchema = z.object({
   gender: z.nativeEnum(PatientGender).optional(),
   address: optionalTrimmedString(500),
 });
+
+export const createDepartmentSchema = z
+  .object({
+    name: departmentName,
+  })
+  .strict();
+
+export const departmentIdParamsSchema = z.object({
+  departmentId: entityId,
+});
+
+export const assignDepartmentDoctorSchema = z
+  .object({
+    doctorUserId: entityId,
+  })
+  .strict();
 
 export const appointmentIdParamsSchema = z.object({
   appointmentId: entityId,
@@ -36,7 +53,7 @@ export const updateAppointmentSchema = z
     scheduledAt: isoDateTime.optional(),
     durationMinutes: z.number().int().min(1).max(1440).optional(),
     status: z.nativeEnum(AppointmentStatus).optional(),
-    notes: optionalNullableTrimmedString(2000),
+    notes: optionalNullableTrimmedString(2000).optional(),
   })
   .refine(
     (value) =>
@@ -59,6 +76,9 @@ export const updateDoctorQueueAppointmentSchema = z
   .strict();
 
 export type CreatePatientBody = z.infer<typeof createPatientSchema>;
+export type CreateDepartmentBody = z.infer<typeof createDepartmentSchema>;
+export type AssignDepartmentDoctorBody = z.infer<typeof assignDepartmentDoctorSchema>;
+export type DepartmentIdParams = z.infer<typeof departmentIdParamsSchema>;
 export type CreateAppointmentBody = z.infer<typeof createAppointmentSchema>;
 export type UpdateAppointmentBody = z.infer<typeof updateAppointmentSchema>;
 export type UpdateDoctorQueueAppointmentBody = z.infer<typeof updateDoctorQueueAppointmentSchema>;

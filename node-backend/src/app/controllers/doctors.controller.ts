@@ -6,6 +6,15 @@ import { HTTP_STATUS } from '../../shared/constants/http-status.js';
 import { AppError } from '../../shared/errors/app-error.js';
 import { asyncHandler } from '../../shared/utils/async-handler.js';
 
+const serializeDoctorDirectoryEntry = (
+  doctor: Awaited<ReturnType<typeof opdService.listSchedulableDoctors>>[number],
+) => ({
+  id: doctor.id,
+  username: doctor.username,
+  departmentId: doctor.departmentId,
+  departmentName: doctor.departmentName,
+});
+
 export const listSchedulableDoctorsController = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const principal = req.auth;
@@ -18,7 +27,7 @@ export const listSchedulableDoctorsController = asyncHandler(
 
     return res.status(HTTP_STATUS.ok).json({
       success: true,
-      data: doctors,
+      data: doctors.map(serializeDoctorDirectoryEntry),
     });
   },
 );

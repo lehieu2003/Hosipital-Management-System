@@ -7,6 +7,7 @@ import { AppError } from '../../shared/errors/app-error.js';
 import { logger } from '../../shared/utils/logger.js';
 import {
   opdRepository,
+  type OpdDepartmentRecord,
   type OpdDoctorDirectoryRecord,
 } from '../repositories/opd.repository.js';
 
@@ -17,6 +18,14 @@ export type CreatePatientInput = {
   dateOfBirth?: string;
   gender?: PatientGender;
   address?: string;
+};
+
+export type CreateDepartmentInput = {
+  name: string;
+};
+
+export type AssignDepartmentDoctorInput = {
+  doctorUserId: string;
 };
 
 export type CreateAppointmentInput = {
@@ -41,7 +50,21 @@ export type UpdateDoctorQueueAppointmentInput = {
   status: 'CHECKED_IN' | 'COMPLETED';
 };
 
-export type DoctorDirectoryEntry = Pick<OpdDoctorDirectoryRecord, 'id' | 'username'>;
+export type DepartmentAssignmentDoctor = Pick<OpdDoctorDirectoryRecord, 'id' | 'username'>;
+
+export type DepartmentSummary = {
+  id: string;
+  name: string;
+  assignmentCount: number;
+  assignedDoctor: DepartmentAssignmentDoctor | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type DoctorDirectoryEntry = Pick<OpdDoctorDirectoryRecord, 'id' | 'username'> & {
+  departmentId: string;
+  departmentName: string;
+};
 
 const DOCTOR_ALLOWED_STATUS_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
   [AppointmentStatus.SCHEDULED]: [AppointmentStatus.CHECKED_IN],
@@ -60,6 +83,26 @@ const normalizeDateOfBirth = (dateOfBirth?: string) => {
 };
 
 const normalizeScheduledAt = (scheduledAt: string) => new Date(scheduledAt);
+
+const ensureAdminActor = (actor: AuthPrincipal) => {
+  if (actor.role === UserRole.ADMIN) {
+    return;
+  }
+
+  logger.warn(
+    {
+      actorRole: actor.role,
+      actorUserId: actor.userId,
+    },
+    'admin_config_role_denied',
+  );
+
+  throw new AppError(
+    'Role is not permitted for this resource',
+    HTTP_STATUS.forbidden,
+    ERROR_CODES.forbidden,
+  );
+};
 
 const ensureDoctorActor = (actor: AuthPrincipal) => {
   if (actor.role === UserRole.DOCTOR) {
@@ -81,13 +124,173 @@ const ensureDoctorActor = (actor: AuthPrincipal) => {
   );
 };
 
+const mapDepartmentSummary = (department: OpdDepartmentRecord): DepartmentSummary => ({
+  id: department.id,
+  name: department.name,
+  assignmentCount: department.assignedDoctor ? 1 : 0,
+  assignedDoctor: department.assignedDoctor
+    ? {
+        id: department.assignedDoctor.id,
+        username: department.assignedDoctor.username,
+      }
+    : null,
+  createdAt: department.createdAt,
+  updatedAt: department.updatedAt,
+});
+
 class OpdService {
+  async createDepartment(input: CreateDepartmentInput, actor: AuthPrincipal) {
+    ensureAdminActor(actor);
+
+    const existingDepartment = await opdRepository.findDepartmentByName(input.name);
+    if (existingDepartment) {
+      logger.warn(
+        {
+          actorRole: actor.role,
+          actorUserId: actor.userId,
+          departmentName: input.name,
+          departmentId: existingDepartment.id,
+        },
+        'admin_config_department_create_conflict',
+      );
+
+      throw new AppError(
+        'Department name already exists',
+        HTTP_STATUS.conflict,
+        ERROR_CODES.departmentNameConflict,
+      );
+    }
+
+    try {
+      const department = await opdRepository.createDepartment({
+        name: input.name,
+      });
+      const summary = mapDepartmentSummary(department);
+
+      logger.info(
+        {
+          actorRole: actor.role,
+          actorUserId: actor.userId,
+          departmentId: summary.id,
+          departmentName: summary.name,
+          assignmentCount: summary.assignmentCount,
+        },
+        'admin_config_department_created',
+      );
+
+      return summary;
+    } catch (error) {
+      if (error instanceof AppError && error.code === ERROR_CODES.opdUnavailable) {
+        logger.error(
+          {
+            actorRole: actor.role,
+            actorUserId: actor.userId,
+            departmentName: input.name,
+            errorCode: error.code,
+          },
+          'admin_config_department_create_failed',
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  async listDepartments(actor: AuthPrincipal) {
+    ensureAdminActor(actor);
+
+    try {
+      const departments = await opdRepository.listDepartmentsWithAssignments();
+      const summaries = departments.map(mapDepartmentSummary);
+
+      logger.info(
+        {
+          actorRole: actor.role,
+          actorUserId: actor.userId,
+          departmentCount: summaries.length,
+          departmentIds: summaries.map((department) => department.id),
+          assignedDoctorIds: summaries
+            .filter((department) => department.assignedDoctor)
+            .map((department) => department.assignedDoctor!.id),
+          assignmentCount: summaries.reduce((total, department) => total + department.assignmentCount, 0),
+        },
+        'admin_config_departments_read',
+      );
+
+      return summaries;
+    } catch (error) {
+      if (error instanceof AppError && error.code === ERROR_CODES.opdUnavailable) {
+        logger.error(
+          {
+            actorRole: actor.role,
+            actorUserId: actor.userId,
+            errorCode: error.code,
+          },
+          'admin_config_departments_read_failed',
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  async assignDoctorToDepartment(
+    departmentId: string,
+    input: AssignDepartmentDoctorInput,
+    actor: AuthPrincipal,
+  ) {
+    ensureAdminActor(actor);
+
+    const existingDepartment = await this.getDepartmentById(departmentId);
+    await this.getDoctorAssignmentTargetById(input.doctorUserId, actor);
+
+    try {
+      const department = await opdRepository.assignDoctorToDepartment({
+        departmentId,
+        doctorUserId: input.doctorUserId,
+      });
+      const summary = mapDepartmentSummary(department);
+
+      logger.info(
+        {
+          actorRole: actor.role,
+          actorUserId: actor.userId,
+          departmentId: summary.id,
+          departmentName: summary.name,
+          previousDoctorUserId: existingDepartment.assignedDoctor?.id ?? null,
+          doctorUserId: input.doctorUserId,
+          assignmentCount: summary.assignmentCount,
+        },
+        'admin_config_doctor_assigned',
+      );
+
+      return summary;
+    } catch (error) {
+      if (error instanceof AppError && error.code === ERROR_CODES.opdUnavailable) {
+        logger.error(
+          {
+            actorRole: actor.role,
+            actorUserId: actor.userId,
+            departmentId,
+            doctorUserId: input.doctorUserId,
+            errorCode: error.code,
+          },
+          'admin_config_doctor_assignment_failed',
+        );
+      }
+
+      throw error;
+    }
+  }
+
   async listSchedulableDoctors(actor: AuthPrincipal) {
     try {
-      const doctors = await opdRepository.findActiveDoctorDirectory();
-      const directory = doctors.map((doctor) => ({
-        id: doctor.id,
-        username: doctor.username,
+      const doctors = await opdRepository.findAssignedDoctorDirectory();
+      const directory = doctors.map((entry) => ({
+        id: entry.doctor.id,
+        username: entry.doctor.username,
+        departmentId: entry.departmentId,
+        departmentName: entry.departmentName,
       }));
 
       logger.info(
@@ -96,6 +299,8 @@ class OpdService {
           actorUserId: actor.userId,
           doctorIds: directory.map((doctor) => doctor.id),
           doctorUsernames: directory.map((doctor) => doctor.username),
+          departmentIds: directory.map((doctor) => doctor.departmentId),
+          departmentNames: directory.map((doctor) => doctor.departmentName),
           doctorCount: directory.length,
         },
         'opd_doctor_directory_read',
@@ -433,6 +638,20 @@ class OpdService {
     }
   }
 
+  async getDepartmentById(departmentId: string) {
+    const department = await opdRepository.findDepartmentById(departmentId);
+
+    if (!department) {
+      throw new AppError(
+        'Department not found',
+        HTTP_STATUS.notFound,
+        ERROR_CODES.departmentNotFound,
+      );
+    }
+
+    return department;
+  }
+
   async getPatientById(patientId: string) {
     const patient = await opdRepository.findPatientById(patientId);
 
@@ -493,6 +712,34 @@ class OpdService {
         'Scheduling target must be an active doctor principal',
         HTTP_STATUS.unprocessableEntity,
         ERROR_CODES.schedulingTargetNotDoctor,
+      );
+    }
+
+    return user;
+  }
+
+  async getDoctorAssignmentTargetById(doctorUserId: string, actor?: AuthPrincipal) {
+    const user = await opdRepository.findUserById(doctorUserId);
+
+    if (!user || !user.isActive) {
+      throw new AppError('Doctor not found', HTTP_STATUS.notFound, ERROR_CODES.doctorNotFound);
+    }
+
+    if (user.role !== UserRole.DOCTOR) {
+      logger.warn(
+        {
+          actorRole: actor?.role,
+          actorUserId: actor?.userId,
+          doctorUserId,
+          resolvedRole: user.role,
+        },
+        'admin_config_doctor_role_validation_denied',
+      );
+
+      throw new AppError(
+        'Doctor assignment target must be an active doctor principal',
+        HTTP_STATUS.unprocessableEntity,
+        ERROR_CODES.doctorAssignmentTargetNotDoctor,
       );
     }
 

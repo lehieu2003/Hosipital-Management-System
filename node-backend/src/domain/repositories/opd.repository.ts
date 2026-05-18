@@ -23,6 +23,15 @@ export type CreatePatientRecordInput = {
   createdByUserId: string;
 };
 
+export type CreateDepartmentRecordInput = {
+  name: string;
+};
+
+export type AssignDepartmentDoctorRecordInput = {
+  departmentId: string;
+  doctorUserId: string;
+};
+
 export type CreateAppointmentRecordInput = {
   patientId: string;
   doctorUserId: string;
@@ -42,7 +51,22 @@ export type UpdateAppointmentRecordInput = {
   notes?: string | null;
 };
 
-export type DoctorDirectoryRecord = Pick<User, 'id' | 'username' | 'role' | 'isActive'>;
+export type DepartmentAssignmentDoctorRecord = Pick<User, 'id' | 'username' | 'role' | 'isActive'>;
+
+export type DepartmentRecord = {
+  id: string;
+  name: string;
+  assignedDoctorUserId: string | null;
+  assignedDoctor: DepartmentAssignmentDoctorRecord | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type AssignedDoctorDirectoryRecord = {
+  departmentId: string;
+  departmentName: string;
+  doctor: DepartmentAssignmentDoctorRecord;
+};
 
 const ACTIVE_DOCTOR_QUEUE_STATUSES = [
   AppointmentStatus.SCHEDULED,
@@ -74,6 +98,98 @@ const wrapOpdStoreError = (
   );
 };
 
+const validateDepartmentDoctor = (
+  doctor: DepartmentAssignmentDoctorRecord | null,
+  context: string,
+): DepartmentAssignmentDoctorRecord | null => {
+  if (!doctor) {
+    return null;
+  }
+
+  if (
+    typeof doctor.id !== 'string' ||
+    typeof doctor.username !== 'string' ||
+    doctor.role !== UserRole.DOCTOR ||
+    typeof doctor.isActive !== 'boolean'
+  ) {
+    throw new Error(`${context} returned malformed assigned doctor principal`);
+  }
+
+  return doctor;
+};
+
+const validateDepartmentRecord = (
+  department: DepartmentRecord | null,
+  context: string,
+): DepartmentRecord | null => {
+  if (!department) {
+    return null;
+  }
+
+  if (
+    typeof department.id !== 'string' ||
+    typeof department.name !== 'string' ||
+    !(department.createdAt instanceof Date) ||
+    !(department.updatedAt instanceof Date)
+  ) {
+    throw new Error(`${context} returned malformed department record`);
+  }
+
+  const assignedDoctor = validateDepartmentDoctor(department.assignedDoctor, context);
+
+  if (department.assignedDoctorUserId === null) {
+    if (assignedDoctor !== null) {
+      throw new Error(`${context} returned unexpected assigned doctor relation`);
+    }
+
+    return {
+      ...department,
+      assignedDoctor,
+    };
+  }
+
+  if (typeof department.assignedDoctorUserId !== 'string' || assignedDoctor === null) {
+    throw new Error(`${context} returned malformed assignment relation`);
+  }
+
+  if (department.assignedDoctorUserId !== assignedDoctor.id) {
+    throw new Error(`${context} returned mismatched assigned doctor relation`);
+  }
+
+  return {
+    ...department,
+    assignedDoctor,
+  };
+};
+
+const requireDepartmentRecord = (
+  department: DepartmentRecord | null,
+  context: string,
+): DepartmentRecord => {
+  const validatedDepartment = validateDepartmentRecord(department, context);
+  if (!validatedDepartment) {
+    throw new Error(`${context} returned no department record`);
+  }
+
+  return validatedDepartment;
+};
+
+const departmentWithAssignmentSelect = {
+  id: true,
+  name: true,
+  assignedDoctorUserId: true,
+  createdAt: true,
+  updatedAt: true,
+  assignedDoctor: {
+    select: {
+      id: true,
+      username: true,
+      role: true,
+      isActive: true,
+    },
+  },
+} as const;
+
 class OpdRepository {
   async createPatient(data: CreatePatientRecordInput) {
     try {
@@ -83,6 +199,21 @@ class OpdRepository {
     } catch (error) {
       return wrapOpdStoreError('create_patient', error, {
         actorUserId: data.createdByUserId,
+      });
+    }
+  }
+
+  async createDepartment(data: CreateDepartmentRecordInput) {
+    try {
+      const department = await db.department.create({
+        data,
+        select: departmentWithAssignmentSelect,
+      });
+
+      return requireDepartmentRecord(department, 'create_department');
+    } catch (error) {
+      return wrapOpdStoreError('create_department', error, {
+        departmentName: data.name,
       });
     }
   }
@@ -111,44 +242,122 @@ class OpdRepository {
     }
   }
 
-  async findActiveDoctorDirectory() {
+  async findDepartmentById(id: string) {
     try {
-      const doctors = await db.user.findMany({
-        where: {
-          role: UserRole.DOCTOR,
-          isActive: true,
-        },
-        orderBy: [{ username: 'asc' }, { id: 'asc' }],
-        select: {
-          id: true,
-          username: true,
-          role: true,
-          isActive: true,
-        },
+      const department = await db.department.findUnique({
+        where: { id },
+        select: departmentWithAssignmentSelect,
       });
 
-      if (!Array.isArray(doctors)) {
+      return validateDepartmentRecord(department, 'find_department_by_id');
+    } catch (error) {
+      return wrapOpdStoreError('find_department_by_id', error, {
+        departmentId: id,
+      });
+    }
+  }
+
+  async findDepartmentByName(name: string) {
+    try {
+      const department = await db.department.findUnique({
+        where: { name },
+        select: departmentWithAssignmentSelect,
+      });
+
+      return validateDepartmentRecord(department, 'find_department_by_name');
+    } catch (error) {
+      return wrapOpdStoreError('find_department_by_name', error, {
+        departmentName: name,
+      });
+    }
+  }
+
+  async listDepartmentsWithAssignments() {
+    try {
+      const departments = await db.department.findMany({
+        orderBy: [{ name: 'asc' }, { id: 'asc' }],
+        select: departmentWithAssignmentSelect,
+      });
+
+      if (!Array.isArray(departments)) {
+        throw new Error('Department list returned malformed payload');
+      }
+
+      return departments.map((department) =>
+        requireDepartmentRecord(department, 'list_departments_with_assignments'),
+      );
+    } catch (error) {
+      return wrapOpdStoreError('list_departments_with_assignments', error);
+    }
+  }
+
+  async assignDoctorToDepartment({ departmentId, doctorUserId }: AssignDepartmentDoctorRecordInput) {
+    try {
+      return await db.$transaction(async (tx) => {
+        await tx.department.updateMany({
+          where: {
+            assignedDoctorUserId: doctorUserId,
+            NOT: {
+              id: departmentId,
+            },
+          },
+          data: {
+            assignedDoctorUserId: null,
+          },
+        });
+
+        const department = await tx.department.update({
+          where: { id: departmentId },
+          data: {
+            assignedDoctorUserId: doctorUserId,
+          },
+          select: departmentWithAssignmentSelect,
+        });
+
+        return requireDepartmentRecord(department, 'assign_doctor_to_department');
+      });
+    } catch (error) {
+      return wrapOpdStoreError('assign_doctor_to_department', error, {
+        departmentId,
+        doctorUserId,
+      });
+    }
+  }
+
+  async findAssignedDoctorDirectory() {
+    try {
+      const departments = await db.department.findMany({
+        where: {
+          assignedDoctorUserId: {
+            not: null,
+          },
+        },
+        orderBy: [{ name: 'asc' }, { id: 'asc' }],
+        select: departmentWithAssignmentSelect,
+      });
+
+      if (!Array.isArray(departments)) {
         throw new Error('Doctor directory lookup returned malformed payload');
       }
 
-      for (const doctor of doctors) {
-        if (
-          !doctor ||
-          typeof doctor.id !== 'string' ||
-          typeof doctor.username !== 'string' ||
-          doctor.role !== UserRole.DOCTOR ||
-          doctor.isActive !== true
-        ) {
-          throw new Error('Doctor directory lookup returned malformed doctor principal');
-        }
-      }
+      return departments.map((department) => {
+        const validatedDepartment = validateDepartmentRecord(
+          department,
+          'find_assigned_doctor_directory',
+        );
 
-      return doctors;
-    } catch (error) {
-      return wrapOpdStoreError('find_active_doctor_directory', error, {
-        role: UserRole.DOCTOR,
-        isActive: true,
+        if (!validatedDepartment?.assignedDoctor || validatedDepartment.assignedDoctor.isActive !== true) {
+          throw new Error('Doctor directory lookup returned malformed assigned doctor state');
+        }
+
+        return {
+          departmentId: validatedDepartment.id,
+          departmentName: validatedDepartment.name,
+          doctor: validatedDepartment.assignedDoctor,
+        };
       });
+    } catch (error) {
+      return wrapOpdStoreError('find_assigned_doctor_directory', error);
     }
   }
 
@@ -321,4 +530,6 @@ export type OpdDoctorQueueRecord = Prisma.AppointmentGetPayload<{
     patient: true;
   };
 }>;
-export type OpdDoctorDirectoryRecord = DoctorDirectoryRecord;
+export type OpdDepartmentRecord = DepartmentRecord;
+export type OpdAssignedDoctorDirectoryRecord = AssignedDoctorDirectoryRecord;
+export type OpdDoctorDirectoryRecord = DepartmentAssignmentDoctorRecord;

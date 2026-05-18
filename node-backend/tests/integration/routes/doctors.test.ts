@@ -3,12 +3,50 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UserRole } from '@prisma/client';
 
-const { dbMock, dbState, refreshSessionStore, userStore } = vi.hoisted(() => {
+const { dbMock, dbState, departmentStore, refreshSessionStore, userStore } = vi.hoisted(() => {
+  const departmentStore = new Map<string, any>();
   const refreshSessionStore = new Map<string, any>();
   const userStore = new Map<string, any>();
   const dbState = {
     failNextDoctorDirectoryLookup: false,
     malformedNextDoctorDirectoryLookup: false,
+  };
+
+  const shapeDepartmentRecord = (department: any, select?: any) => {
+    const assignedDoctor = department.assignedDoctorUserId
+      ? userStore.get(department.assignedDoctorUserId) ?? null
+      : null;
+
+    if (!select) {
+      return {
+        ...department,
+        assignedDoctor,
+      };
+    }
+
+    return {
+      ...(select.id ? { id: department.id } : {}),
+      ...(select.name ? { name: department.name } : {}),
+      ...(select.assignedDoctorUserId ? { assignedDoctorUserId: department.assignedDoctorUserId } : {}),
+      ...(select.createdAt ? { createdAt: department.createdAt } : {}),
+      ...(select.updatedAt ? { updatedAt: department.updatedAt } : {}),
+      ...(select.assignedDoctor
+        ? {
+            assignedDoctor: assignedDoctor
+              ? {
+                  ...(select.assignedDoctor.select.id ? { id: assignedDoctor.id } : {}),
+                  ...(select.assignedDoctor.select.username
+                    ? { username: assignedDoctor.username }
+                    : {}),
+                  ...(select.assignedDoctor.select.role ? { role: assignedDoctor.role } : {}),
+                  ...(select.assignedDoctor.select.isActive
+                    ? { isActive: assignedDoctor.isActive }
+                    : {}),
+                }
+              : null,
+          }
+        : {}),
+    };
   };
 
   const dbMock: any = {
@@ -19,58 +57,6 @@ const { dbMock, dbState, refreshSessionStore, userStore } = vi.hoisted(() => {
         }
 
         return Array.from(userStore.values()).find((user) => user.username === where.username) ?? null;
-      },
-      findMany: async ({ where, orderBy, select }: { where?: any; orderBy?: any[]; select?: any }) => {
-        if (dbState.failNextDoctorDirectoryLookup) {
-          dbState.failNextDoctorDirectoryLookup = false;
-          throw new Error('database unavailable');
-        }
-
-        if (dbState.malformedNextDoctorDirectoryLookup) {
-          dbState.malformedNextDoctorDirectoryLookup = false;
-          return [
-            {
-              id: 'malformed-user',
-              username: 'not-a-doctor',
-              role: UserRole.RECEPTIONIST,
-              isActive: true,
-            },
-          ];
-        }
-
-        const doctors = Array.from(userStore.values())
-          .filter((user) => (where?.role ? user.role === where.role : true))
-          .filter((user) => (where?.isActive !== undefined ? user.isActive === where.isActive : true))
-          .sort((left, right) => {
-            for (const clause of orderBy ?? []) {
-              if ('username' in clause) {
-                const delta = String(left.username).localeCompare(String(right.username));
-                if (delta !== 0) {
-                  return clause.username === 'desc' ? -delta : delta;
-                }
-              }
-
-              if ('id' in clause) {
-                const delta = String(left.id).localeCompare(String(right.id));
-                if (delta !== 0) {
-                  return clause.id === 'desc' ? -delta : delta;
-                }
-              }
-            }
-
-            return 0;
-          });
-
-        if (!select) {
-          return doctors;
-        }
-
-        return doctors.map((doctor) => ({
-          ...(select.id ? { id: doctor.id } : {}),
-          ...(select.username ? { username: doctor.username } : {}),
-          ...(select.role ? { role: doctor.role } : {}),
-          ...(select.isActive ? { isActive: doctor.isActive } : {}),
-        }));
       },
       create: async ({ data }: { data: any }) => {
         const id = `user_${userStore.size + 1}`;
@@ -137,9 +123,70 @@ const { dbMock, dbState, refreshSessionStore, userStore } = vi.hoisted(() => {
         return { count };
       },
     },
+    department: {
+      findMany: async ({ where, orderBy, select }: { where?: any; orderBy?: any[]; select?: any }) => {
+        if (dbState.failNextDoctorDirectoryLookup) {
+          dbState.failNextDoctorDirectoryLookup = false;
+          throw new Error('database unavailable');
+        }
+
+        if (dbState.malformedNextDoctorDirectoryLookup) {
+          dbState.malformedNextDoctorDirectoryLookup = false;
+          const malformedDepartment = {
+            id: 'department_malformed',
+            name: 'Malformed',
+            assignedDoctorUserId: 'user_reception_helper',
+            createdAt: new Date('2026-05-18T01:00:00.000Z'),
+            updatedAt: new Date('2026-05-18T01:00:00.000Z'),
+          };
+
+          userStore.set('user_reception_helper', {
+            id: 'user_reception_helper',
+            username: 'reception-helper',
+            passwordHash: 'hashed',
+            role: UserRole.RECEPTIONIST,
+            isActive: true,
+            createdAt: malformedDepartment.createdAt,
+            updatedAt: malformedDepartment.updatedAt,
+          });
+
+          return [shapeDepartmentRecord(malformedDepartment, select)];
+        }
+
+        const departments = Array.from(departmentStore.values())
+          .filter((department) => {
+            if (where?.assignedDoctorUserId?.not === null) {
+              return department.assignedDoctorUserId !== null;
+            }
+
+            return true;
+          })
+          .sort((left, right) => {
+            for (const clause of orderBy ?? []) {
+              if ('name' in clause) {
+                const delta = String(left.name).localeCompare(String(right.name));
+                if (delta !== 0) {
+                  return clause.name === 'desc' ? -delta : delta;
+                }
+              }
+
+              if ('id' in clause) {
+                const delta = String(left.id).localeCompare(String(right.id));
+                if (delta !== 0) {
+                  return clause.id === 'desc' ? -delta : delta;
+                }
+              }
+            }
+
+            return 0;
+          });
+
+        return departments.map((department) => shapeDepartmentRecord(department, select));
+      },
+    },
   };
 
-  return { dbMock, dbState, refreshSessionStore, userStore };
+  return { dbMock, dbState, departmentStore, refreshSessionStore, userStore };
 });
 
 vi.mock('../../../src/infrastructure/database/client.js', () => ({
@@ -177,8 +224,25 @@ const seedUser = (overrides: Record<string, unknown> = {}) => {
   return record;
 };
 
+const seedDepartment = (overrides: Record<string, unknown> = {}) => {
+  const id = `department_${departmentStore.size + 1}`;
+  const now = new Date('2026-05-15T09:00:00.000Z');
+  const record = {
+    id,
+    name: `Department ${departmentStore.size + 1}`,
+    assignedDoctorUserId: null,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+
+  departmentStore.set(record.id, record);
+  return record;
+};
+
 describe('doctor directory routes', () => {
   beforeEach(() => {
+    departmentStore.clear();
     refreshSessionStore.clear();
     userStore.clear();
     dbState.failNextDoctorDirectoryLookup = false;
@@ -186,58 +250,64 @@ describe('doctor directory routes', () => {
     vi.restoreAllMocks();
   });
 
-  it('should allow reception staff to read active doctor principals in deterministic order', async () => {
+  it('should allow reception staff to read assigned active doctors in deterministic department order', async () => {
     const app = createApp();
     const loggerInfoSpy = vi.spyOn(logger, 'info');
     const accessToken = await loginAs(app, 'reception');
+    await loginAs(app, 'doctor');
 
-    const bravoDoctor = seedUser({ id: 'user_bravo', username: 'bravo-doctor', role: UserRole.DOCTOR, isActive: true });
-    const alphaDoctorLaterId = seedUser({ id: 'user_z', username: 'alpha-doctor', role: UserRole.DOCTOR, isActive: true });
-    const alphaDoctorEarlierId = seedUser({ id: 'user_a', username: 'alpha-doctor', role: UserRole.DOCTOR, isActive: true });
     const seededDoctor = Array.from(userStore.values()).find((user) => user.username === 'doctor');
     expect(seededDoctor).toBeDefined();
+    const bravoDoctor = seedUser({ id: 'user_bravo', username: 'bravo-doctor', role: UserRole.DOCTOR });
+    const alphaDoctor = seedUser({ id: 'user_alpha', username: 'alpha-doctor', role: UserRole.DOCTOR });
+    seedUser({ id: 'user_inactive', username: 'inactive-doctor', role: UserRole.DOCTOR, isActive: false });
 
-    seedUser({ username: 'inactive-doctor', role: UserRole.DOCTOR, isActive: false });
-    seedUser({ username: 'reception-helper', role: UserRole.RECEPTIONIST, isActive: true });
+    const cardiology = seedDepartment({ id: 'department_b', name: 'Cardiology', assignedDoctorUserId: alphaDoctor.id });
+    const neurology = seedDepartment({ id: 'department_a', name: 'Neurology', assignedDoctorUserId: bravoDoctor.id });
+    seedDepartment({ id: 'department_z', name: 'Unassigned', assignedDoctorUserId: null });
 
-    const response = await request(app)
+    const healthyResponse = await request(app)
       .get('/api/v1/doctors')
       .set('Authorization', `Bearer ${accessToken}`);
 
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({
+    expect(healthyResponse.status).toBe(200);
+    expect(healthyResponse.body).toEqual({
       success: true,
       data: [
-        { id: alphaDoctorEarlierId.id, username: 'alpha-doctor' },
-        { id: alphaDoctorLaterId.id, username: 'alpha-doctor' },
-        { id: bravoDoctor.id, username: 'bravo-doctor' },
-        { id: seededDoctor!.id, username: 'doctor' },
+        {
+          id: alphaDoctor.id,
+          username: 'alpha-doctor',
+          departmentId: cardiology.id,
+          departmentName: 'Cardiology',
+        },
+        {
+          id: bravoDoctor.id,
+          username: 'bravo-doctor',
+          departmentId: neurology.id,
+          departmentName: 'Neurology',
+        },
       ],
     });
-    expect(
-      response.body.data.every((doctor: any) => Object.keys(doctor).sort().join(',') === 'id,username'),
-    ).toBe(true);
     expect(loggerInfoSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         actorRole: UserRole.RECEPTIONIST,
         actorUserId: expect.any(String),
-        doctorCount: 4,
-        doctorIds: [alphaDoctorEarlierId.id, alphaDoctorLaterId.id, bravoDoctor.id, seededDoctor!.id],
-        doctorUsernames: ['alpha-doctor', 'alpha-doctor', 'bravo-doctor', 'doctor'],
+        doctorCount: 2,
+        doctorIds: [alphaDoctor.id, bravoDoctor.id],
+        doctorUsernames: ['alpha-doctor', 'bravo-doctor'],
+        departmentIds: [cardiology.id, neurology.id],
+        departmentNames: ['Cardiology', 'Neurology'],
       }),
       'opd_doctor_directory_read',
     );
+    expect(seededDoctor).toBeDefined();
   });
 
-  it('should also allow admins and return an empty success envelope when no doctors are active', async () => {
+  it('should also allow admins and return an empty success envelope when no doctors are assigned', async () => {
     const app = createApp();
     const accessToken = await loginAs(app, 'admin');
-    const seededDoctor = Array.from(userStore.values()).find((user) => user.username === 'doctor');
-    expect(seededDoctor).toBeDefined();
-    seededDoctor!.isActive = false;
-    userStore.set(seededDoctor!.id, seededDoctor);
-    seedUser({ username: 'doctor-disabled', role: UserRole.DOCTOR, isActive: false });
-    seedUser({ username: 'non-doctor', role: UserRole.ADMIN, isActive: true });
+    await loginAs(app, 'doctor');
+    seedDepartment({ name: 'Cardiology', assignedDoctorUserId: null });
 
     const response = await request(app)
       .get('/api/v1/doctors')

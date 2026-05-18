@@ -45,6 +45,8 @@ describe('Swagger docs routes', () => {
         '/auth/refresh': expect.any(Object),
         '/auth/logout': expect.any(Object),
         '/auth/me': expect.any(Object),
+        '/admin/config/departments': expect.any(Object),
+        '/admin/config/departments/{departmentId}/doctor-assignment': expect.any(Object),
         '/patients': expect.any(Object),
         '/doctor/queue': expect.any(Object),
         '/doctor/queue/{appointmentId}': expect.any(Object),
@@ -59,6 +61,47 @@ describe('Swagger docs routes', () => {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
+        }),
+      }),
+    );
+
+    expect(response.body.paths['/admin/config/departments'].get).toEqual(
+      expect.objectContaining({
+        security: [{ bearerAuth: [] }],
+        responses: expect.objectContaining({
+          '200': expect.any(Object),
+          '401': expect.any(Object),
+          '403': expect.any(Object),
+          '503': expect.any(Object),
+        }),
+      }),
+    );
+
+    expect(response.body.paths['/admin/config/departments'].post).toEqual(
+      expect.objectContaining({
+        security: [{ bearerAuth: [] }],
+        responses: expect.objectContaining({
+          '201': expect.any(Object),
+          '400': expect.any(Object),
+          '401': expect.any(Object),
+          '403': expect.any(Object),
+          '409': expect.any(Object),
+          '503': expect.any(Object),
+        }),
+      }),
+    );
+
+    expect(response.body.paths['/admin/config/departments/{departmentId}/doctor-assignment'].put).toEqual(
+      expect.objectContaining({
+        security: [{ bearerAuth: [] }],
+        responses: expect.objectContaining({
+          '200': expect.any(Object),
+          '400': expect.any(Object),
+          '401': expect.any(Object),
+          '403': expect.any(Object),
+          '404': expect.any(Object),
+          '422': expect.any(Object),
+          '503': expect.any(Object),
         }),
       }),
     );
@@ -90,7 +133,7 @@ describe('Swagger docs routes', () => {
 
     expect(response.body.components.schemas.DoctorDirectoryEntry).toEqual(
       expect.objectContaining({
-        required: ['id', 'username'],
+        required: ['id', 'username', 'departmentId', 'departmentName'],
       }),
     );
 

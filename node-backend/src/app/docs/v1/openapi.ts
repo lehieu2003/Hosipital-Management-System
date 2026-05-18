@@ -21,8 +21,16 @@ export const openApiV1Document = {
       description: 'Authentication and session management',
     },
     {
+      name: 'Admin Configuration',
+      description: 'Admin-only live department and doctor-assignment configuration',
+    },
+    {
       name: 'Patients',
       description: 'OPD patient registration operations',
+    },
+    {
+      name: 'Doctors',
+      description: 'Reception-facing doctor discovery derived from live admin assignments',
     },
     {
       name: 'Appointments',
@@ -306,9 +314,110 @@ export const openApiV1Document = {
           },
         },
       },
-      DoctorDirectoryEntry: {
+      CreateDepartmentRequest: {
+        type: 'object',
+        required: ['name'],
+        additionalProperties: false,
+        properties: {
+          name: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 120,
+            example: 'Cardiology',
+          },
+        },
+      },
+      DepartmentAssignedDoctor: {
         type: 'object',
         required: ['id', 'username'],
+        properties: {
+          id: {
+            type: 'string',
+            example: 'user_doctor_1',
+          },
+          username: {
+            type: 'string',
+            example: 'doctor',
+          },
+        },
+      },
+      Department: {
+        type: 'object',
+        required: ['id', 'name', 'assignmentCount', 'assignedDoctor', 'createdAt', 'updatedAt'],
+        properties: {
+          id: {
+            type: 'string',
+            example: 'department_1',
+          },
+          name: {
+            type: 'string',
+            example: 'Cardiology',
+          },
+          assignmentCount: {
+            type: 'integer',
+            minimum: 0,
+            maximum: 1,
+            example: 1,
+          },
+          assignedDoctor: {
+            allOf: [{ $ref: '#/components/schemas/DepartmentAssignedDoctor' }],
+            nullable: true,
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+        },
+        description:
+          'Live admin configuration department with at most one current assigned doctor principal. The backend stays authoritative for assignment state.',
+      },
+      DepartmentEnvelope: {
+        type: 'object',
+        required: ['success', 'data'],
+        properties: {
+          success: {
+            type: 'boolean',
+            enum: [true],
+          },
+          data: {
+            $ref: '#/components/schemas/Department',
+          },
+        },
+      },
+      DepartmentsEnvelope: {
+        type: 'object',
+        required: ['success', 'data'],
+        properties: {
+          success: {
+            type: 'boolean',
+            enum: [true],
+          },
+          data: {
+            type: 'array',
+            items: {
+              $ref: '#/components/schemas/Department',
+            },
+          },
+        },
+      },
+      AssignDepartmentDoctorRequest: {
+        type: 'object',
+        required: ['doctorUserId'],
+        additionalProperties: false,
+        properties: {
+          doctorUserId: {
+            type: 'string',
+            example: 'user_doctor_1',
+          },
+        },
+      },
+      DoctorDirectoryEntry: {
+        type: 'object',
+        required: ['id', 'username', 'departmentId', 'departmentName'],
         properties: {
           id: {
             type: 'string',
@@ -318,9 +427,17 @@ export const openApiV1Document = {
             type: 'string',
             example: 'doctor',
           },
+          departmentId: {
+            type: 'string',
+            example: 'department_1',
+          },
+          departmentName: {
+            type: 'string',
+            example: 'Cardiology',
+          },
         },
         description:
-          'Read-only active doctor principal for scheduling discovery. The backend filters to active DOCTOR users so clients never infer or role-filter principals locally.',
+          'Read-only active doctor assignment for scheduling discovery. The backend emits only currently assigned doctors and includes department metadata so clients can prove live configuration without inferring it locally.',
       },
       DoctorDirectoryEnvelope: {
         type: 'object',
@@ -799,6 +916,245 @@ export const openApiV1Document = {
         },
       },
     },
+    '/admin/config/departments': {
+      get: {
+        tags: ['Admin Configuration'],
+        summary: 'List live departments and current doctor-assignment state',
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Departments ordered by name then id with current assignment state.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/DepartmentsEnvelope',
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Bearer token is missing, invalid, or expired.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '403': {
+            description: 'Authenticated principal is not permitted to manage admin configuration.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '503': {
+            description: 'Department configuration storage is temporarily unavailable.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ['Admin Configuration'],
+        summary: 'Create a live department for doctor assignment',
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/CreateDepartmentRequest',
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Department created successfully with no current doctor assignment.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/DepartmentEnvelope',
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Request body validation failed.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Bearer token is missing, invalid, or expired.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '403': {
+            description: 'Authenticated principal is not permitted to manage admin configuration.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '409': {
+            description: 'Department name already exists.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '503': {
+            description: 'Department configuration storage is temporarily unavailable.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/admin/config/departments/{departmentId}/doctor-assignment': {
+      put: {
+        tags: ['Admin Configuration'],
+        summary: 'Assign an active doctor principal to one live department',
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: 'departmentId',
+            in: 'path',
+            required: true,
+            schema: {
+              type: 'string',
+            },
+            description: 'Department identifier to receive the current doctor assignment.',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/AssignDepartmentDoctorRequest',
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description:
+              'Department assignment updated successfully. Any prior assignment for the doctor is replaced atomically.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/DepartmentEnvelope',
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Request body or path validation failed.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Bearer token is missing, invalid, or expired.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '403': {
+            description: 'Authenticated principal is not permitted to manage admin configuration.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '404': {
+            description: 'Department or doctor principal was not found.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '422': {
+            description: 'Referenced assignment target exists but is not an active doctor principal.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+          '503': {
+            description: 'Department configuration storage is temporarily unavailable.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ErrorEnvelope',
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     '/patients': {
       post: {
         tags: ['Patients'],
@@ -875,9 +1231,9 @@ export const openApiV1Document = {
     '/doctors': {
       get: {
         tags: ['Doctors'],
-        summary: 'List schedulable doctor principals for reception workflows',
+        summary: 'List schedulable doctors derived from live admin assignments',
         description:
-          'Read-only active doctor directory for scheduling discovery. Access is limited to admin and receptionist principals, and lookup failures fail closed as OPD_UNAVAILABLE with no partial doctor list.',
+          'Read-only active doctor directory for scheduling discovery. Access is limited to admin and receptionist principals, and lookup failures fail closed as OPD_UNAVAILABLE with no fallback to all active doctor users.',
         security: [
           {
             bearerAuth: [],
@@ -886,7 +1242,7 @@ export const openApiV1Document = {
         responses: {
           '200': {
             description:
-              'Deterministically ordered active doctor principals only, sorted by username then id.',
+              'Deterministically ordered active doctor assignments only, sorted by department name then department id.',
             content: {
               'application/json': {
                 schema: {
@@ -917,7 +1273,7 @@ export const openApiV1Document = {
           },
           '503': {
             description:
-              'Doctor directory lookup is temporarily unavailable or returned malformed data; no partial doctor list is exposed.',
+              'Doctor directory lookup is temporarily unavailable or returned malformed assignment data; no partial doctor list is exposed.',
             content: {
               'application/json': {
                 schema: {

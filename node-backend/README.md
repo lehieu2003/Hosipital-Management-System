@@ -11,6 +11,12 @@ Express + TypeScript backend scaffold for the Hospital Management System.
 - Logging: Pino
 - Testing: Vitest + Supertest
 
+## Persistence Contract
+- The authoritative M001 backend persistence path is the shared Prisma/PostgreSQL repository contract validated in R007 and recorded by D027/D028.
+- Auth and OPD repositories import the shared database client instead of creating per-request clients or bypassing repository seams.
+- PostgreSQL datasource and Prisma Client generation are defined in the Prisma schema, while repository-bounded writes own transactional behavior where the runtime needs it.
+- The executable proof lives in the persistence-contract architecture test plus representative auth/OPD route suites; if those fail, treat the persistence contract as drifted rather than inferring intent from older milestone notes.
+
 ## Quick Start
 ```bash
 cp node-backend/.env.example node-backend/.env
@@ -36,4 +42,5 @@ npm --prefix node-backend run dev
 - Assigned doctors can advance only their own queue lifecycle through `PATCH /api/v1/doctor/queue/:appointmentId` with strict `{ version, status }` input, optimistic concurrency, and allowed forward transitions `SCHEDULED -> CHECKED_IN -> COMPLETED`
 - The frontend workspace ships a repo-tracked localhost verifier at `frontend/scripts/verify-s16-live.mjs` (run with `npm --prefix frontend run verify:s16:live`) that proves the assembled receptionist→doctor flow against this backend and emits stable browser assertion targets without claiming admin delivery is live
 - The frontend workspace also ships `frontend/scripts/verify-s17-live.mjs` (run with `npm --prefix frontend run verify:s17:live`) to prove the live admin department setup → receptionist scheduling → doctor queue journey with redacted JSON evidence and browser-checklist selectors
+- Persistence proof is intentionally concentrated in three seams future agents should consult together: the Prisma schema for datasource/client generation, the shared database client plus auth/OPD repositories for lifecycle/repository boundaries, and `tests/architecture/persistence-contract.test.ts` for fail-loud contract assertions
 - OPD route tests and OpenAPI assertions lock the patient/appointment/doctor-queue contracts with deterministic `error.code` responses for validation, RBAC denial, wrong-owner denial, invalid lifecycle transitions, stale-version conflicts, missing references, and temporary repository unavailability

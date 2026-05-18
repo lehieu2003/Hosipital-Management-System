@@ -331,8 +331,10 @@ export function SchedulingPage() {
             {scheduleMutation.data ? (
               <dl className="grid gap-3 rounded-3xl border border-current/10 bg-white/85 p-5 text-sm">
                 <SummaryRow label="Registration number" testId="scheduled-patient-registration-number" value={scheduleMutation.data.patient.registrationNumber} />
+                <SummaryRow label="Appointment ID" testId="scheduled-appointment-id" value={scheduleMutation.data.appointment.id} />
                 <SummaryRow label="Appointment status" testId="scheduled-appointment-status" value={scheduleMutation.data.appointment.status} />
-                <SummaryRow label="Selected doctor" value={doctorLabelForId(readyDoctors, scheduleMutation.data.appointment.doctorUserId)} />
+                <SummaryRow label="Appointment version" testId="scheduled-appointment-version" value={String(scheduleMutation.data.appointment.version)} />
+                <SummaryRow label="Selected doctor" testId="scheduled-appointment-doctor" value={doctorLabelForId(readyDoctors, scheduleMutation.data.appointment.doctorUserId)} />
               </dl>
             ) : null}
           </SchedulingStateCard>

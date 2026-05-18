@@ -11,6 +11,11 @@ import {
 
 const fetchMock = vi.fn<typeof fetch>();
 
+const HANDOFF_APPOINTMENT_ID = 'appointment-s16-handoff';
+const HANDOFF_PATIENT_ID = 'patient-s16-handoff';
+const HANDOFF_PATIENT_NAME = 'Jane Doe';
+const HANDOFF_REGISTRATION_NUMBER = 'REG-S16-1001';
+
 describe('doctor queue page integration', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', fetchMock);
@@ -26,18 +31,38 @@ describe('doctor queue page integration', () => {
   it('polls the live queue, sends current versions, and removes completed visits after authoritative refetch', async () => {
     seedDoctorLogin([
       doctorQueueResponse([
-        queueAppointment({ id: 'appointment-1', status: 'SCHEDULED', version: 1 }),
+        queueAppointment({
+          id: HANDOFF_APPOINTMENT_ID,
+          patientId: HANDOFF_PATIENT_ID,
+          patientName: HANDOFF_PATIENT_NAME,
+          registrationNumber: HANDOFF_REGISTRATION_NUMBER,
+          status: 'SCHEDULED',
+          version: 1,
+        }),
       ]),
       doctorQueueMutationResponse({
-        id: 'appointment-1',
+        id: HANDOFF_APPOINTMENT_ID,
+        patientId: HANDOFF_PATIENT_ID,
+        patientName: HANDOFF_PATIENT_NAME,
+        registrationNumber: HANDOFF_REGISTRATION_NUMBER,
         status: 'CHECKED_IN',
         version: 2,
       }),
       doctorQueueResponse([
-        queueAppointment({ id: 'appointment-1', status: 'CHECKED_IN', version: 2 }),
+        queueAppointment({
+          id: HANDOFF_APPOINTMENT_ID,
+          patientId: HANDOFF_PATIENT_ID,
+          patientName: HANDOFF_PATIENT_NAME,
+          registrationNumber: HANDOFF_REGISTRATION_NUMBER,
+          status: 'CHECKED_IN',
+          version: 2,
+        }),
       ]),
       doctorQueueMutationResponse({
-        id: 'appointment-1',
+        id: HANDOFF_APPOINTMENT_ID,
+        patientId: HANDOFF_PATIENT_ID,
+        patientName: HANDOFF_PATIENT_NAME,
+        registrationNumber: HANDOFF_REGISTRATION_NUMBER,
         status: 'COMPLETED',
         version: 3,
       }),
@@ -47,35 +72,39 @@ describe('doctor queue page integration', () => {
     const user = userEvent.setup();
     await loginToQueue(user);
 
-    const initialItem = await screen.findByTestId('doctor-queue-item-appointment-1');
+    const initialItem = await screen.findByTestId(`doctor-queue-item-${HANDOFF_APPOINTMENT_ID}`);
+    expect(initialItem).toHaveAttribute('data-appointment-id', HANDOFF_APPOINTMENT_ID);
     expect(initialItem).toHaveAttribute('data-appointment-status', 'SCHEDULED');
+    expect(initialItem).toHaveAttribute('data-appointment-version', '1');
     expect(screen.getByTestId('doctor-queue-polling-badge')).toHaveTextContent('Polling every 15s');
+    expect(screen.getByText(HANDOFF_REGISTRATION_NUMBER)).toBeInTheDocument();
 
-    await user.click(screen.getByTestId('queue-action-check-in-appointment-1'));
+    await user.click(screen.getByTestId(`queue-action-check-in-${HANDOFF_APPOINTMENT_ID}`));
 
     const checkedInState = await screen.findByTestId('doctor-queue-action-success-state');
     expect(checkedInState).toHaveAttribute('data-screen-code', 'CHECKED_IN');
     expect(screen.getByTestId('doctor-queue-last-version')).toHaveTextContent('2');
 
-    const refreshedItem = await screen.findByTestId('doctor-queue-item-appointment-1');
+    const refreshedItem = await screen.findByTestId(`doctor-queue-item-${HANDOFF_APPOINTMENT_ID}`);
     expect(refreshedItem).toHaveAttribute('data-appointment-status', 'CHECKED_IN');
-    expect(screen.getByTestId('doctor-queue-version-appointment-1')).toHaveTextContent('2');
-    expect(screen.getByTestId('queue-action-complete-appointment-1')).toBeInTheDocument();
+    expect(refreshedItem).toHaveAttribute('data-appointment-version', '2');
+    expect(screen.getByTestId(`doctor-queue-version-${HANDOFF_APPOINTMENT_ID}`)).toHaveTextContent('2');
+    expect(screen.getByTestId(`queue-action-complete-${HANDOFF_APPOINTMENT_ID}`)).toBeInTheDocument();
 
-    await user.click(screen.getByTestId('queue-action-complete-appointment-1'));
+    await user.click(screen.getByTestId(`queue-action-complete-${HANDOFF_APPOINTMENT_ID}`));
 
     const completedState = await screen.findByTestId('doctor-queue-action-success-state');
     expect(completedState).toHaveAttribute('data-screen-code', 'COMPLETED');
 
     const emptyState = await screen.findByTestId('doctor-queue-empty-state');
     expect(emptyState).toHaveAttribute('data-screen-code', 'EMPTY_QUEUE');
-    expect(screen.queryByTestId('doctor-queue-item-appointment-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`doctor-queue-item-${HANDOFF_APPOINTMENT_ID}`)).not.toBeInTheDocument();
 
     expect(fetchMock).toHaveBeenCalledTimes(6);
     expect(fetchMock.mock.calls[1]?.[0]).toBe('http://localhost:3000/api/v1/doctor/queue');
-    expect(fetchMock.mock.calls[2]?.[0]).toBe('http://localhost:3000/api/v1/doctor/queue/appointment-1');
+    expect(fetchMock.mock.calls[2]?.[0]).toBe(`http://localhost:3000/api/v1/doctor/queue/${HANDOFF_APPOINTMENT_ID}`);
     expect(fetchMock.mock.calls[3]?.[0]).toBe('http://localhost:3000/api/v1/doctor/queue');
-    expect(fetchMock.mock.calls[4]?.[0]).toBe('http://localhost:3000/api/v1/doctor/queue/appointment-1');
+    expect(fetchMock.mock.calls[4]?.[0]).toBe(`http://localhost:3000/api/v1/doctor/queue/${HANDOFF_APPOINTMENT_ID}`);
     expect(fetchMock.mock.calls[5]?.[0]).toBe('http://localhost:3000/api/v1/doctor/queue');
 
     const firstPatchBody = JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body));
@@ -307,6 +336,9 @@ function doctorQueueResponse(data: unknown[]) {
 
 function doctorQueueMutationResponse(overrides: {
   id: string;
+  patientId?: string;
+  patientName?: string;
+  registrationNumber?: string;
   status: 'CHECKED_IN' | 'COMPLETED';
   version: number;
 }) {
@@ -327,12 +359,15 @@ function doctorQueueMutationResponse(overrides: {
 
 function queueAppointment(overrides: {
   id: string;
+  patientId?: string;
+  patientName?: string;
+  registrationNumber?: string;
   status: 'SCHEDULED' | 'CHECKED_IN' | 'COMPLETED';
   version: number;
 }) {
   return {
     id: overrides.id,
-    patientId: `patient-${overrides.id}`,
+    patientId: overrides.patientId ?? `patient-${overrides.id}`,
     doctorUserId: 'user-3',
     scheduledAt: '2026-05-20T02:30:00.000Z',
     durationMinutes: 30,
@@ -341,9 +376,9 @@ function queueAppointment(overrides: {
     createdAt: '2026-05-20T01:45:00.000Z',
     updatedAt: '2026-05-20T01:45:00.000Z',
     patient: {
-      id: `patient-${overrides.id}`,
-      registrationNumber: `REG-${overrides.id}`,
-      fullName: `Patient ${overrides.id}`,
+      id: overrides.patientId ?? `patient-${overrides.id}`,
+      registrationNumber: overrides.registrationNumber ?? `REG-${overrides.id}`,
+      fullName: overrides.patientName ?? `Patient ${overrides.id}`,
       primaryPhone: '+1555000111',
       dateOfBirth: null,
       gender: 'UNSPECIFIED',

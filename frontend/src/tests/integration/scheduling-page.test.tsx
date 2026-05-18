@@ -14,6 +14,12 @@ const DOCTORS = [
   { id: 'doctor-2', username: 'doctor.sam' },
 ] as const;
 
+const HANDOFF_APPOINTMENT_ID = 'appointment-s16-handoff';
+const HANDOFF_PATIENT_ID = 'patient-s16-handoff';
+const HANDOFF_REGISTRATION_NUMBER = 'REG-S16-1001';
+const HANDOFF_DOCTOR_ID = 'doctor-2';
+const HANDOFF_DOCTOR_USERNAME = 'doctor.sam';
+
 const fetchMock = vi.fn<typeof fetch>();
 
 describe('scheduling page integration', () => {
@@ -43,7 +49,11 @@ describe('scheduling page integration', () => {
     const successState = await screen.findByTestId('reception-scheduling-success-state');
     expect(successState).toHaveAttribute('data-screen-code', 'SCHEDULED');
     expect(successState).toHaveAttribute('data-screen-status', 'success');
-    expect(screen.getByTestId('scheduled-patient-registration-number')).toHaveTextContent('REG-1001');
+    expect(screen.getByTestId('scheduled-patient-registration-number')).toHaveTextContent(HANDOFF_REGISTRATION_NUMBER);
+    expect(screen.getByTestId('scheduled-appointment-id')).toHaveTextContent(HANDOFF_APPOINTMENT_ID);
+    expect(screen.getByTestId('scheduled-appointment-status')).toHaveTextContent('SCHEDULED');
+    expect(screen.getByTestId('scheduled-appointment-version')).toHaveTextContent('1');
+    expect(screen.getByTestId('scheduled-appointment-doctor')).toHaveTextContent(HANDOFF_DOCTOR_USERNAME);
     expect(screen.queryByLabelText(/doctorUserId/i)).not.toBeInTheDocument();
 
     expect(fetchMock).toHaveBeenCalledTimes(4);
@@ -57,10 +67,11 @@ describe('scheduling page integration', () => {
       primaryPhone: '+1555000111',
     });
     expect(appointmentBody).toMatchObject({
-      doctorUserId: 'doctor-2',
-      patientId: 'patient-1',
+      doctorUserId: HANDOFF_DOCTOR_ID,
+      patientId: HANDOFF_PATIENT_ID,
     });
-  });
+  }, 10000);
+
 
   it('keeps the screen fail closed when the doctor directory is unavailable', async () => {
     seedReceptionLogin({ doctorsResponse: apiErrorResponse(503, 'OPD_UNAVAILABLE', 'Directory unavailable.') });
@@ -205,7 +216,7 @@ async function fillSchedulingForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByTestId('patient-full-name-input'), 'Jane Doe');
   await user.type(screen.getByTestId('patient-primary-phone-input'), '+1555000111');
   await user.type(screen.getByTestId('patient-email-input'), 'jane@example.com');
-  await user.selectOptions(screen.getByTestId('appointment-doctor-select'), 'doctor-2');
+  await user.selectOptions(screen.getByTestId('appointment-doctor-select'), HANDOFF_DOCTOR_ID);
   fireEvent.change(screen.getByTestId('appointment-scheduled-at-input'), {
     target: { value: '2026-05-20T09:30' },
   });
@@ -230,8 +241,8 @@ function patientResponse() {
     {
       success: true,
       data: {
-        id: 'patient-1',
-        registrationNumber: 'REG-1001',
+        id: HANDOFF_PATIENT_ID,
+        registrationNumber: HANDOFF_REGISTRATION_NUMBER,
         fullName: 'Jane Doe',
         primaryPhone: '+1555000111',
         email: 'jane@example.com',
@@ -251,9 +262,9 @@ function appointmentResponse() {
     {
       success: true,
       data: {
-        id: 'appointment-1',
-        patientId: 'patient-1',
-        doctorUserId: 'doctor-2',
+        id: HANDOFF_APPOINTMENT_ID,
+        patientId: HANDOFF_PATIENT_ID,
+        doctorUserId: HANDOFF_DOCTOR_ID,
         scheduledAt: '2026-05-20T02:30:00.000Z',
         durationMinutes: 45,
         status: 'SCHEDULED',

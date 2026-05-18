@@ -8,6 +8,7 @@ type SchedulingStateCardProps = {
   description: string;
   diagnostics: string[];
   icon: ReactNode;
+  metadata?: Record<string, string | undefined>;
   status: string;
   testId: string;
   title: string;
@@ -20,6 +21,7 @@ export function SchedulingStateCard({
   description,
   diagnostics,
   icon,
+  metadata,
   status,
   testId,
   title,
@@ -31,6 +33,7 @@ export function SchedulingStateCard({
       data-screen-code={code}
       data-screen-status={status}
       data-testid={testId}
+      {...metadata}
     >
       <CardHeader className="space-y-4 pb-4">
         <div className="flex size-12 items-center justify-center rounded-2xl bg-white/85 shadow-sm">

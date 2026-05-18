@@ -49,6 +49,11 @@ describe('scheduling page integration', () => {
     const successState = await screen.findByTestId('reception-scheduling-success-state');
     expect(successState).toHaveAttribute('data-screen-code', 'SCHEDULED');
     expect(successState).toHaveAttribute('data-screen-status', 'success');
+    expect(successState).toHaveAttribute('data-appointment-id', HANDOFF_APPOINTMENT_ID);
+    expect(successState).toHaveAttribute('data-appointment-version', '1');
+    expect(successState).toHaveAttribute('data-doctor-user-id', HANDOFF_DOCTOR_ID);
+    expect(successState).toHaveAttribute('data-patient-registration-number', HANDOFF_REGISTRATION_NUMBER);
+    expect(screen.getByTestId('reception-scheduling-page')).toHaveAttribute('data-schedulable-doctor-count', '2');
     expect(screen.getByTestId('scheduled-patient-registration-number')).toHaveTextContent(HANDOFF_REGISTRATION_NUMBER);
     expect(screen.getByTestId('scheduled-appointment-id')).toHaveTextContent(HANDOFF_APPOINTMENT_ID);
     expect(screen.getByTestId('scheduled-appointment-status')).toHaveTextContent('SCHEDULED');

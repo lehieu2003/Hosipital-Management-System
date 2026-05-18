@@ -89,14 +89,22 @@ describe('doctor queue page integration', () => {
     expect(refreshedItem).toHaveAttribute('data-appointment-status', 'CHECKED_IN');
     expect(refreshedItem).toHaveAttribute('data-appointment-version', '2');
     expect(screen.getByTestId(`doctor-queue-version-${HANDOFF_APPOINTMENT_ID}`)).toHaveTextContent('2');
+    expect(screen.getByTestId(`queue-action-complete-${HANDOFF_APPOINTMENT_ID}`)).toHaveAttribute(
+      'data-next-status',
+      'COMPLETED',
+    );
     expect(screen.getByTestId(`queue-action-complete-${HANDOFF_APPOINTMENT_ID}`)).toBeInTheDocument();
 
     await user.click(screen.getByTestId(`queue-action-complete-${HANDOFF_APPOINTMENT_ID}`));
 
     const completedState = await screen.findByTestId('doctor-queue-action-success-state');
     expect(completedState).toHaveAttribute('data-screen-code', 'COMPLETED');
+    expect(completedState).toHaveAttribute('data-last-appointment-id', HANDOFF_APPOINTMENT_ID);
+    expect(completedState).toHaveAttribute('data-last-appointment-status', 'COMPLETED');
+    expect(completedState).toHaveAttribute('data-last-appointment-version', '3');
 
     const emptyState = await screen.findByTestId('doctor-queue-empty-state');
+    expect(screen.getByTestId('doctor-queue-page')).toHaveAttribute('data-active-queue-count', '0');
     expect(emptyState).toHaveAttribute('data-screen-code', 'EMPTY_QUEUE');
     expect(screen.queryByTestId(`doctor-queue-item-${HANDOFF_APPOINTMENT_ID}`)).not.toBeInTheDocument();
 

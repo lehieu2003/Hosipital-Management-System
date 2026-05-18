@@ -123,6 +123,7 @@ export function MainLayout() {
         isSidebarOpen ? 'lg:grid-cols-[292px_minmax(0,1fr)]' : 'lg:grid-cols-[92px_minmax(0,1fr)]',
       )}
       data-auth-status={authStatus}
+      data-current-path={location.pathname}
       data-role={session?.role ?? 'anonymous'}
       data-session-notice={sessionNotice ?? 'none'}
       data-testid="app-shell"

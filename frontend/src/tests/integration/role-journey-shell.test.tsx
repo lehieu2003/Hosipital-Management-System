@@ -197,6 +197,7 @@ describe('role journey shell integration', () => {
     const shell = await screen.findByTestId('app-shell');
     expect(shell).toHaveAttribute('data-role', 'receptionist');
     expect(shell).toHaveAttribute('data-auth-status', 'authenticated');
+    expect(shell).toHaveAttribute('data-current-path', '/app/admin');
     expect(screen.getByTestId('router-location')).toHaveAttribute('data-pathname', '/app/admin');
 
     expect(await screen.findByTestId('route-forbidden-state')).toBeInTheDocument();

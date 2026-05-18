@@ -60,6 +60,7 @@ export function DoctorQueueCard({
                 <Button
                   aria-busy={isUpdating}
                   className="brand-button h-11 w-full rounded-xl px-5 text-sm font-semibold"
+                  data-next-status={action.nextStatus}
                   data-testid={action.testId}
                   disabled={isUpdating || disableAction}
                   onClick={onAdvance}

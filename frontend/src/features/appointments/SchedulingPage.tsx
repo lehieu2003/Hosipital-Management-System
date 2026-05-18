@@ -119,7 +119,11 @@ export function SchedulingPage() {
   const readyDoctors = doctorsQuery.data ?? [];
 
   return (
-    <section className="space-y-5 sm:space-y-6" data-testid="reception-scheduling-page">
+    <section
+      className="space-y-5 sm:space-y-6"
+      data-schedulable-doctor-count={String(readyDoctors.length)}
+      data-testid="reception-scheduling-page"
+    >
       <div className="dashboard-card p-6 sm:p-8 lg:p-10">
         <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           <Badge className="brand-soft rounded-full px-3 py-1 text-[11px] sm:text-xs" variant="secondary">
@@ -323,6 +327,15 @@ export function SchedulingPage() {
             description={submissionState.description}
             diagnostics={submissionState.diagnostics}
             icon={renderStateIcon(submissionState.status)}
+            metadata={{
+              'data-appointment-id': scheduleMutation.data?.appointment.id,
+              'data-appointment-status': scheduleMutation.data?.appointment.status,
+              'data-appointment-version': scheduleMutation.data
+                ? String(scheduleMutation.data.appointment.version)
+                : undefined,
+              'data-doctor-user-id': scheduleMutation.data?.appointment.doctorUserId,
+              'data-patient-registration-number': scheduleMutation.data?.patient.registrationNumber,
+            }}
             status={submissionState.status}
             testId={submissionState.testId}
             title={submissionState.title}

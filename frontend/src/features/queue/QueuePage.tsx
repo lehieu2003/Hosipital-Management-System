@@ -83,7 +83,11 @@ export function QueuePage() {
   const activeMutationAppointmentId = updateMutation.variables?.appointmentId ?? null;
 
   return (
-    <section className="space-y-6" data-testid="doctor-queue-page">
+    <section
+      className="space-y-6"
+      data-active-queue-count={String(queue.length)}
+      data-testid="doctor-queue-page"
+    >
       <div className="dashboard-card p-8 lg:p-10">
         <div className="flex flex-wrap items-center gap-3">
           <Badge className="brand-soft rounded-full px-3 py-1" variant="secondary">
@@ -186,6 +190,13 @@ export function QueuePage() {
             description={actionState.description}
             diagnostics={actionState.diagnostics}
             icon={renderStateIcon(actionState.status)}
+            metadata={{
+              'data-last-appointment-id': updateMutation.data?.id,
+              'data-last-appointment-status': updateMutation.data?.status,
+              'data-last-appointment-version': updateMutation.data
+                ? String(updateMutation.data.version)
+                : undefined,
+            }}
             status={actionState.status}
             testId={actionState.testId}
             title={actionState.title}

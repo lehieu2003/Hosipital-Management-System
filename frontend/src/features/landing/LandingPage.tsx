@@ -9,11 +9,14 @@ import { FinalCtaSection } from './components/FinalCtaSection';
 
 export function LandingPage() {
   return (
-    <div className="medical-shell min-h-screen text-foreground" data-testid="landing-page">
+    <div
+      className='medical-shell min-h-screen text-foreground'
+      data-testid='landing-page'
+    >
       <LandingHeader />
       <HeroSection />
 
-      <main className="space-y-6 px-4 pb-12 sm:px-6 lg:px-8 lg:pb-16">
+      <main className='space-y-6 px-4 pb-12 sm:px-6 lg:px-8 lg:pb-16'>
         <OverviewSection />
         <RoleGridSection />
         <WorkflowSection />

@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,8 +10,18 @@ import {
 } from '@/tests/test-utils/render-app';
 
 const DOCTORS = [
-  { id: 'doctor-1', username: 'doctor.alex' },
-  { id: 'doctor-2', username: 'doctor.sam' },
+  {
+    id: 'doctor-1',
+    username: 'doctor.alex',
+    departmentId: 'department-cardiology',
+    departmentName: 'Cardiology',
+  },
+  {
+    id: 'doctor-2',
+    username: 'doctor.sam',
+    departmentId: 'department-neurology',
+    departmentName: 'Neurology',
+  },
 ] as const;
 
 const HANDOFF_APPOINTMENT_ID = 'appointment-s16-handoff';
@@ -19,6 +29,7 @@ const HANDOFF_PATIENT_ID = 'patient-s16-handoff';
 const HANDOFF_REGISTRATION_NUMBER = 'REG-S16-1001';
 const HANDOFF_DOCTOR_ID = 'doctor-2';
 const HANDOFF_DOCTOR_USERNAME = 'doctor.sam';
+const HANDOFF_DEPARTMENT_NAME = 'Neurology';
 
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -52,6 +63,7 @@ describe('scheduling page integration', () => {
     expect(successState).toHaveAttribute('data-appointment-id', HANDOFF_APPOINTMENT_ID);
     expect(successState).toHaveAttribute('data-appointment-version', '1');
     expect(successState).toHaveAttribute('data-doctor-user-id', HANDOFF_DOCTOR_ID);
+    expect(successState).toHaveAttribute('data-department-name', HANDOFF_DEPARTMENT_NAME);
     expect(successState).toHaveAttribute('data-patient-registration-number', HANDOFF_REGISTRATION_NUMBER);
     expect(screen.getByTestId('reception-scheduling-page')).toHaveAttribute('data-schedulable-doctor-count', '2');
     expect(screen.getByTestId('scheduled-patient-registration-number')).toHaveTextContent(HANDOFF_REGISTRATION_NUMBER);
@@ -59,6 +71,7 @@ describe('scheduling page integration', () => {
     expect(screen.getByTestId('scheduled-appointment-status')).toHaveTextContent('SCHEDULED');
     expect(screen.getByTestId('scheduled-appointment-version')).toHaveTextContent('1');
     expect(screen.getByTestId('scheduled-appointment-doctor')).toHaveTextContent(HANDOFF_DOCTOR_USERNAME);
+    expect(screen.getByTestId('scheduled-appointment-department')).toHaveTextContent(HANDOFF_DEPARTMENT_NAME);
     expect(screen.queryByLabelText(/doctorUserId/i)).not.toBeInTheDocument();
 
     expect(fetchMock).toHaveBeenCalledTimes(4);
@@ -77,6 +90,51 @@ describe('scheduling page integration', () => {
     });
   }, 10000);
 
+  it('renders duplicate usernames with department context so receptionist choices stay unambiguous', async () => {
+    seedReceptionLogin({
+      doctorsResponse: jsonResponse(
+        {
+          success: true,
+          data: [
+            {
+              id: 'doctor-a',
+              username: 'doctor.shared',
+              departmentId: 'department-a',
+              departmentName: 'Cardiology',
+            },
+            {
+              id: 'doctor-b',
+              username: 'doctor.shared',
+              departmentId: 'department-b',
+              departmentName: 'Neurology',
+            },
+          ],
+        },
+        200,
+      ),
+    });
+
+    const user = userEvent.setup();
+    await loginToScheduling(user);
+
+    const select = screen.getByTestId('appointment-doctor-select');
+    expect(within(select).getByRole('option', { name: 'doctor.shared — Cardiology' })).toBeInTheDocument();
+    expect(within(select).getByRole('option', { name: 'doctor.shared — Neurology' })).toBeInTheDocument();
+  });
+
+  it('shows an explicit empty state when no doctors are assigned yet', async () => {
+    seedReceptionLogin({
+      doctorsResponse: jsonResponse({ success: true, data: [] }, 200),
+    });
+
+    const user = userEvent.setup();
+    await loginToScheduling(user);
+
+    const emptyState = await screen.findByTestId('reception-scheduling-empty-state');
+    expect(emptyState).toHaveAttribute('data-screen-code', 'NO_DOCTORS_AVAILABLE');
+    expect(emptyState).toHaveAttribute('data-screen-status', 'empty');
+    expect(screen.getByTestId('schedule-submit-button')).toBeDisabled();
+  });
 
   it('keeps the screen fail closed when the doctor directory is unavailable', async () => {
     seedReceptionLogin({ doctorsResponse: apiErrorResponse(503, 'OPD_UNAVAILABLE', 'Directory unavailable.') });
@@ -88,6 +146,25 @@ describe('scheduling page integration', () => {
     expect(unavailableState).toHaveAttribute('data-screen-code', 'UNAVAILABLE');
     expect(unavailableState).toHaveAttribute('data-screen-status', 'unavailable');
     expect(screen.queryByTestId('reception-scheduling-form')).not.toBeInTheDocument();
+  });
+
+  it('treats malformed doctor directory entries as unavailable instead of showing stale options', async () => {
+    seedReceptionLogin({
+      doctorsResponse: jsonResponse(
+        {
+          success: true,
+          data: [{ id: 'doctor-1', username: 'doctor.alex', departmentId: 'department-cardiology' }],
+        },
+        200,
+      ),
+    });
+
+    const user = userEvent.setup();
+    await loginToScheduling(user, { waitForDoctorSelect: false });
+
+    const unavailableState = await screen.findByTestId('reception-scheduling-unavailable-state');
+    expect(unavailableState).toHaveAttribute('data-screen-code', 'UNAVAILABLE');
+    expect(unavailableState).toHaveAttribute('data-screen-status', 'unavailable');
   });
 
   it('halts after patient creation failure and never attempts appointment creation', async () => {

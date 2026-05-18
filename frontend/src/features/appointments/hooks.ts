@@ -14,6 +14,8 @@ import {
 
 const DOCTOR_DIRECTORY_STALE_TIME_MS = 5 * 60 * 1000;
 
+export const SCHEDULABLE_DOCTORS_QUERY_KEY = ['appointments', 'doctors'] as const;
+
 type SchedulingViewStatus = 'ready' | 'empty' | 'forbidden' | 'conflict' | 'unavailable';
 
 export type SchedulingBoundaryState = {
@@ -39,7 +41,7 @@ export function useSchedulableDoctorsQuery() {
 
   return useQuery({
     queryFn: () => listSchedulableDoctors(client),
-    queryKey: ['appointments', 'doctors'],
+    queryKey: SCHEDULABLE_DOCTORS_QUERY_KEY,
     retry: false,
     staleTime: DOCTOR_DIRECTORY_STALE_TIME_MS,
   });
@@ -90,12 +92,12 @@ export function resolveSchedulingBoundaryState(
     return {
       status: 'empty',
       code: 'NO_DOCTORS_AVAILABLE',
-      title: 'No active doctors available',
+      title: 'No assigned doctors available',
       description:
-        'The Node backend returned an empty doctor directory, so booking remains blocked until schedulable doctor principals exist.',
+        'No live doctor assignments are configured yet, so booking remains blocked until an admin assigns a doctor to a department.',
       diagnostics: [
-        'Doctor lookup succeeded but returned zero active doctor principals.',
-        'The screen does not fall back to manually typed doctor identifiers.',
+        'Doctor lookup succeeded but returned zero currently assigned doctors.',
+        'The screen does not fall back to manually typed doctor identifiers or generic active-doctor principals.',
       ],
     };
   }
@@ -106,7 +108,7 @@ export function resolveSchedulingBoundaryState(
     title: 'Scheduling contract ready',
     description: 'Doctor discovery is live and the receptionist workflow can register and book patients.',
     diagnostics: [
-      `Loaded ${doctors.length} active doctor principal${doctors.length === 1 ? '' : 's'}.`,
+      `Loaded ${doctors.length} assigned doctor option${doctors.length === 1 ? '' : 's'} from the live admin configuration.`,
       'Patient registration and appointment creation still fail closed on backend errors.',
     ],
   };

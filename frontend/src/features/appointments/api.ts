@@ -10,6 +10,8 @@ type NullableGender = 'FEMALE' | 'MALE' | 'OTHER' | 'UNSPECIFIED' | null;
 export type SchedulableDoctor = {
   id: string;
   username: string;
+  departmentId: string;
+  departmentName: string;
 };
 
 export type CreatePatientInput = {
@@ -151,6 +153,8 @@ function parseDoctorDirectoryEnvelope(payload: unknown) {
     return {
       id: expectString(record.id, `doctor directory entry ${index}.id`),
       username: expectString(record.username, `doctor directory entry ${index}.username`),
+      departmentId: expectString(record.departmentId, `doctor directory entry ${index}.departmentId`),
+      departmentName: expectString(record.departmentName, `doctor directory entry ${index}.departmentName`),
     } satisfies SchedulableDoctor;
   });
 }

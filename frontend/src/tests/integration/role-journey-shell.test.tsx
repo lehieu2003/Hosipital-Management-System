@@ -23,14 +23,24 @@ describe('role journey shell integration', () => {
     window.sessionStorage.clear();
   });
 
-  it('routes seeded admin login to the real home shell', async () => {
-    fetchMock.mockResolvedValueOnce(
-      authSuccessResponse({
-        accessToken: 'admin-token',
-        role: 'admin',
-        username: 'admin',
-      }),
-    );
+  it('routes seeded admin login to the live admin workspace shell', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        authSuccessResponse({
+          accessToken: 'admin-token',
+          role: 'admin',
+          username: 'admin',
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: [],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      );
 
     const user = userEvent.setup();
     renderApp({ initialEntries: ['/login'] });
@@ -49,9 +59,10 @@ describe('role journey shell integration', () => {
       expect(location).toHaveAttribute('data-pathname', '/app/admin');
     });
 
-    const state = await screen.findByTestId('admin-overview-unavailable-state');
-    expect(state).toHaveAttribute('data-screen-code', 'CONTRACT_PENDING');
-    expect(state).toHaveAttribute('data-screen-status', 'unavailable');
+    expect(await screen.findByTestId('admin-overview-page')).toBeInTheDocument();
+    const state = await screen.findByTestId('admin-overview-empty-state');
+    expect(state).toHaveAttribute('data-screen-code', 'EMPTY');
+    expect(state).toHaveAttribute('data-screen-status', 'empty');
   });
 
   it('routes seeded receptionist login to the live scheduling shell', async () => {
@@ -67,7 +78,14 @@ describe('role journey shell integration', () => {
         new Response(
           JSON.stringify({
             success: true,
-            data: [{ id: 'doctor-1', username: 'doctor.alex' }],
+            data: [
+              {
+                id: 'doctor-1',
+                username: 'doctor.alex',
+                departmentId: 'department-cardiology',
+                departmentName: 'Cardiology',
+              },
+            ],
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         ),
@@ -95,6 +113,10 @@ describe('role journey shell integration', () => {
     expect(readyState).toHaveAttribute('data-screen-code', 'READY');
     expect(readyState).toHaveAttribute('data-screen-status', 'idle');
     expect(screen.getByTestId('appointment-doctor-select')).toBeInTheDocument();
+    expect(screen.getByTestId('schedulable-doctor-directory-row-doctor-1')).toHaveAttribute(
+      'data-department-name',
+      'Cardiology',
+    );
     expect(screen.queryByTestId('reception-scheduling-unavailable-state')).not.toBeInTheDocument();
   });
 

@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { OperationalStateView } from '@/features/opd/components/OperationalStateView';
 
-import type { ScheduleAppointmentInput } from './api';
+import type { ScheduleAppointmentInput, SchedulableDoctor } from './api';
 import {
   resolveSchedulingBoundaryState,
   resolveSchedulingSubmissionState,
@@ -117,6 +117,10 @@ export function SchedulingPage() {
   }
 
   const readyDoctors = doctorsQuery.data ?? [];
+  const selectedDoctor = findDoctorById(readyDoctors, formState.doctorUserId);
+  const scheduledDoctor = scheduleMutation.data
+    ? findDoctorById(readyDoctors, scheduleMutation.data.appointment.doctorUserId)
+    : null;
 
   return (
     <section
@@ -133,7 +137,7 @@ export function SchedulingPage() {
             {readyDoctors.length} schedulable {readyDoctors.length === 1 ? 'doctor' : 'doctors'}
           </Badge>
           <Badge className="rounded-full border-slate-200 bg-white px-3 py-1 text-[11px] text-slate-700 sm:text-xs" variant="outline">
-            Patient → appointment
+            Live admin configuration
           </Badge>
         </div>
         <div className="mt-5 max-w-4xl space-y-3 sm:mt-6">
@@ -142,7 +146,8 @@ export function SchedulingPage() {
           </h2>
           <p className="text-pretty text-[15px] leading-7 text-slate-600 sm:text-base">
             Register the patient first, then book the visit against the live Node backend with
-            explicit states for directory lookup, registration, and booking outcomes.
+            explicit states for directory lookup, registration, booking outcomes, and the assigned
+            department that made the doctor schedulable.
           </p>
         </div>
       </div>
@@ -224,7 +229,7 @@ export function SchedulingPage() {
                   description="Choose from the live doctor directory and capture the slot before submitting the bounded workflow."
                 />
                 <div className="grid gap-4 md:grid-cols-2">
-                  <SchedulingField htmlFor="appointment-doctor-user-id" label="Doctor">
+                  <SchedulingField htmlFor="appointment-doctor-user-id" label="Assigned doctor">
                     <select
                       className="focus-visible:border-ring focus-visible:ring-ring/50 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
                       data-testid="appointment-doctor-select"
@@ -234,10 +239,10 @@ export function SchedulingPage() {
                       required
                       value={formState.doctorUserId}
                     >
-                      <option value="">Select a doctor</option>
+                      <option value="">Select an assigned doctor</option>
                       {readyDoctors.map((doctor) => (
                         <option key={doctor.id} value={doctor.id}>
-                          {doctor.username}
+                          {formatDoctorDirectoryLabel(doctor)}
                         </option>
                       ))}
                     </select>
@@ -251,6 +256,16 @@ export function SchedulingPage() {
                     <Input className="h-11 rounded-xl border-slate-200 bg-white" data-testid="appointment-duration-minutes-input" id="appointment-duration-minutes" max={1440} min={1} name="durationMinutes" onChange={(event) => handleFieldChange('durationMinutes', event.target.value)} required type="number" value={formState.durationMinutes} />
                   </SchedulingField>
                 </div>
+
+                {selectedDoctor ? (
+                  <Alert className="rounded-2xl border-cyan-200/60 bg-cyan-50/80 text-cyan-950" data-testid="selected-doctor-context">
+                    <CheckCircle2 className="size-4" />
+                    <AlertTitle>{selectedDoctor.username}</AlertTitle>
+                    <AlertDescription>
+                      Scheduling against the live {selectedDoctor.departmentName} department assignment.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
 
                 <SchedulingField htmlFor="appointment-notes" label="Notes">
                   <textarea
@@ -333,6 +348,8 @@ export function SchedulingPage() {
               'data-appointment-version': scheduleMutation.data
                 ? String(scheduleMutation.data.appointment.version)
                 : undefined,
+              'data-department-id': scheduledDoctor?.departmentId,
+              'data-department-name': scheduledDoctor?.departmentName,
               'data-doctor-user-id': scheduleMutation.data?.appointment.doctorUserId,
               'data-patient-registration-number': scheduleMutation.data?.patient.registrationNumber,
             }}
@@ -347,10 +364,37 @@ export function SchedulingPage() {
                 <SummaryRow label="Appointment ID" testId="scheduled-appointment-id" value={scheduleMutation.data.appointment.id} />
                 <SummaryRow label="Appointment status" testId="scheduled-appointment-status" value={scheduleMutation.data.appointment.status} />
                 <SummaryRow label="Appointment version" testId="scheduled-appointment-version" value={String(scheduleMutation.data.appointment.version)} />
-                <SummaryRow label="Selected doctor" testId="scheduled-appointment-doctor" value={doctorLabelForId(readyDoctors, scheduleMutation.data.appointment.doctorUserId)} />
+                <SummaryRow label="Selected doctor" testId="scheduled-appointment-doctor" value={scheduledDoctor ? scheduledDoctor.username : scheduleMutation.data.appointment.doctorUserId} />
+                <SummaryRow label="Assigned department" testId="scheduled-appointment-department" value={scheduledDoctor?.departmentName ?? 'Unknown department'} />
               </dl>
             ) : null}
           </SchedulingStateCard>
+
+          {readyDoctors.length > 0 ? (
+            <Card className="dashboard-card border-border rounded-[28px] sm:rounded-[30px]" data-testid="schedulable-doctor-directory-card">
+              <CardHeader className="gap-2 pb-4">
+                <CardTitle className="text-lg">Live assigned directory</CardTitle>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  These doctor options come from the live admin department assignment workflow.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {readyDoctors.map((doctor) => (
+                  <div
+                    key={`${doctor.id}-${doctor.departmentId}`}
+                    className="rounded-2xl border border-slate-200/70 bg-white/75 p-4"
+                    data-department-id={doctor.departmentId}
+                    data-department-name={doctor.departmentName}
+                    data-doctor-user-id={doctor.id}
+                    data-testid={`schedulable-doctor-directory-row-${doctor.id}`}
+                  >
+                    <p className="font-medium text-slate-950">{doctor.username}</p>
+                    <p className="mt-1 text-sm text-slate-500">Assigned to {doctor.departmentName}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card className="dashboard-card border-border rounded-[28px] sm:rounded-[30px]">
             <CardHeader className="gap-2 pb-4">
@@ -540,7 +584,10 @@ function optionalString(value: string) {
   return trimmed ? trimmed : null;
 }
 
-function doctorLabelForId(doctors: Array<{ id: string; username: string }>, doctorId: string) {
-  const doctor = doctors.find((entry) => entry.id === doctorId);
-  return doctor?.username ?? doctorId;
+function findDoctorById(doctors: SchedulableDoctor[], doctorId: string) {
+  return doctors.find((entry) => entry.id === doctorId) ?? null;
+}
+
+function formatDoctorDirectoryLabel(doctor: SchedulableDoctor) {
+  return `${doctor.username} — ${doctor.departmentName}`;
 }

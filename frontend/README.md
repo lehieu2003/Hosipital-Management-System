@@ -232,6 +232,55 @@ Scope guard for S16:
 - Admin remains intentionally `CONTRACT_PENDING`; passing S16 does **not** claim live admin delivery.
 - The script proves the real Node + React receptionist/doctor flow and the stable browser verification contract around it.
 
+### S17 live localhost rerun
+
+Use this when you need the assembled admin → receptionist → doctor journey with live department setup and assignment evidence.
+
+Start both runtimes:
+
+```bash
+npm --prefix node-backend run dev
+npm --prefix frontend run dev -- --host 127.0.0.1 --port 5173
+```
+
+Then run the tracked verifier:
+
+```bash
+npm --prefix frontend run verify:s17:live
+```
+
+Environment overrides:
+
+```bash
+S17_FRONTEND_URL=http://127.0.0.1:5173
+S17_API_BASE_URL=http://localhost:3000/api/v1
+S17_VERIFY_TIMEOUT_MS=20000
+```
+
+What the verifier proves directly:
+
+- frontend landing and login shells are reachable
+- backend health is ready
+- invalid credentials still fail with `INVALID_CREDENTIALS`
+- admin creates a unique live department, observes it as unassigned, rejects a non-doctor assignment target, then assigns the seeded doctor through `/admin/config/departments/*/doctor-assignment`
+- receptionist API access to admin configuration stays fail-closed with `FORBIDDEN`
+- receptionist doctor discovery returns the live assigned department metadata and the receptionist can register a patient plus create a `SCHEDULED` appointment against that assignment
+- doctor can see that appointment in `/doctor/queue`, move it to `CHECKED_IN`, then `COMPLETED`, and the completed item disappears from the active queue
+- verifier output stays machine-readable JSON, names the failing phase on error, and redacts tokens, refresh cookies, and raw patient PII
+
+What the verifier emits for browser/UAT replay after it finishes:
+
+- admin live-workspace selectors for `/app/admin`, including the success state, ready state, department card, and assigned doctor row for the created department
+- receptionist scheduling success selectors plus the created appointment ID, version, department, and registration number
+- doctor queue lifecycle selectors keyed to the created appointment
+- receptionist direct-admin denial selectors for `/app/admin`
+- refresh fail-closed seed input for `sessionStorage['hms.frontend.session']` and the expected `/login` selectors
+
+Scope guard for S17:
+
+- S17 supersedes the old admin `CONTRACT_PENDING` proof with live admin configuration closure.
+- S17 does **not** claim work beyond this chain; future slices can still expand broader admin/staff-directory capabilities without changing this proof surface.
+
 Current coverage in the foundation layer includes:
 
 - route shell smoke tests

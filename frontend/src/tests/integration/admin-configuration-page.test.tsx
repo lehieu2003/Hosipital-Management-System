@@ -55,12 +55,15 @@ describe('admin configuration page integration', () => {
 
     const createdState = await screen.findByTestId('admin-overview-success-state');
     expect(createdState).toHaveAttribute('data-screen-code', 'DEPARTMENT_CREATED');
+    expect(createdState).toHaveAttribute('data-department-id', 'department-cardiology');
     expect(createdState).toHaveAttribute('data-department-name', 'Cardiology');
     expect(createdState).toHaveAttribute('data-assignment-count', '0');
 
     const departmentCard = await screen.findByTestId('admin-department-card-department-cardiology');
+    expect(departmentCard).toHaveAttribute('data-department-id', 'department-cardiology');
     expect(departmentCard).toHaveAttribute('data-assignment-count', '0');
     expect(screen.getByTestId('admin-overview-ready-state')).toHaveAttribute('data-screen-code', 'READY');
+    expect(screen.getByTestId('admin-overview-ready-state')).toHaveAttribute('data-screen-status', 'ready');
 
     await user.selectOptions(screen.getByTestId('admin-department-select'), 'department-cardiology');
     await user.type(screen.getByTestId('admin-doctor-user-id-input'), 'doctor-1');
@@ -68,11 +71,17 @@ describe('admin configuration page integration', () => {
 
     const assignedState = await screen.findByTestId('admin-overview-success-state');
     expect(assignedState).toHaveAttribute('data-screen-code', 'DOCTOR_ASSIGNED');
+    expect(assignedState).toHaveAttribute('data-department-id', 'department-cardiology');
     expect(assignedState).toHaveAttribute('data-department-name', 'Cardiology');
     expect(assignedState).toHaveAttribute('data-assigned-doctor-id', 'doctor-1');
     expect(assignedState).toHaveAttribute('data-assigned-doctor-username', 'doctor.alex');
+    expect(assignedState).toHaveAttribute('data-assignment-count', '1');
 
     await waitFor(() => {
+      expect(screen.getByTestId('admin-department-card-department-cardiology')).toHaveAttribute(
+        'data-assigned-doctor-id',
+        'doctor-1',
+      );
       expect(screen.getByTestId('admin-department-card-department-cardiology')).toHaveAttribute(
         'data-assigned-doctor-username',
         'doctor.alex',

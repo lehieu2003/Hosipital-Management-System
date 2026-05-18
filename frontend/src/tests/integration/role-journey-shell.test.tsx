@@ -179,7 +179,10 @@ describe('role journey shell integration', () => {
     expect(await screen.findByTestId('doctor-queue-page')).toBeInTheDocument();
     const queueItem = await screen.findByTestId('doctor-queue-item-appointment-1');
     expect(queueItem).toHaveAttribute('data-appointment-status', 'SCHEDULED');
+    expect(queueItem).toHaveAttribute('data-appointment-version', '1');
     expect(screen.getByTestId('doctor-queue-action-ready-state')).toHaveAttribute('data-screen-code', 'READY');
+    expect(screen.getByTestId('doctor-queue-action-ready-state')).toHaveAttribute('data-screen-status', 'idle');
+    expect(screen.getByTestId('doctor-queue-version-appointment-1')).toHaveTextContent('1');
     expect(screen.queryByTestId('doctor-queue-unavailable-state')).not.toBeInTheDocument();
   });
 

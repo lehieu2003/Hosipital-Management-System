@@ -184,6 +184,54 @@ Blocker-aware acceptance rule for S10:
 - Treat any happy-path operational data on those screens as a failure for S10 because the live Node admin, scheduling, and queue contracts are not wired yet.
 - S10 proves the real auth/RBAC shell, guarded-route denial, and refresh boundaries only; full R010 operational closure still depends on the future Node OPD contracts.
 
+### S16 live localhost rerun
+
+Use this when you need a repo-tracked localhost verifier for the assembled receptionist→doctor runtime flow while still keeping admin delivery explicitly pending.
+
+Start both runtimes:
+
+```bash
+npm --prefix node-backend run dev
+npm --prefix frontend run dev -- --host 127.0.0.1 --port 5173
+```
+
+Then run the tracked verifier:
+
+```bash
+npm --prefix frontend run verify:s16:live
+```
+
+Environment overrides:
+
+```bash
+S16_FRONTEND_URL=http://127.0.0.1:5173
+S16_API_BASE_URL=http://localhost:3000/api/v1
+S16_VERIFY_TIMEOUT_MS=20000
+```
+
+What the verifier proves directly:
+
+- frontend landing and login shells are reachable
+- backend health is ready
+- invalid credentials still fail with `INVALID_CREDENTIALS`
+- seeded `admin`, `reception`, and `doctor` auth bootstrap cleanly through `/auth/login` and `/auth/me`
+- receptionist can read the live doctor directory, register a patient, and create a `SCHEDULED` appointment
+- doctor can see that appointment in `/doctor/queue`, move it to `CHECKED_IN`, then `COMPLETED`, and the completed item disappears from the active queue
+- verifier output stays machine-readable JSON and redacts tokens, refresh cookies, and extra patient detail
+
+What the verifier emits for browser/UAT replay after it finishes:
+
+- admin pending selectors for `/app/admin`
+- receptionist scheduling success selectors plus the created appointment ID, version, and registration number
+- doctor queue selectors for the created appointment
+- receptionist direct-admin denial selectors for `/app/admin`
+- refresh fail-closed seed input for `sessionStorage['hms.frontend.session']` and the expected `/login` selectors
+
+Scope guard for S16:
+
+- Admin remains intentionally `CONTRACT_PENDING`; passing S16 does **not** claim live admin delivery.
+- The script proves the real Node + React receptionist/doctor flow and the stable browser verification contract around it.
+
 Current coverage in the foundation layer includes:
 
 - route shell smoke tests

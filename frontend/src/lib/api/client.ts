@@ -13,13 +13,21 @@ export type ApiErrorCode =
 export class ApiError extends Error {
   readonly status: number;
   readonly code: ApiErrorCode;
+  readonly rawCode: string;
   readonly retryable: boolean;
 
-  constructor(message: string, status: number, code: ApiErrorCode, retryable = false) {
+  constructor(
+    message: string,
+    status: number,
+    code: ApiErrorCode,
+    retryable = false,
+    rawCode = code,
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.rawCode = rawCode;
     this.retryable = retryable;
   }
 }
@@ -191,6 +199,7 @@ async function toApiError(response: Response) {
       response.status,
       mappedCode,
       response.status >= 500,
+      rawCode,
     );
   } catch {
     return mapStatusOnlyError(response.status);

@@ -40,6 +40,10 @@ export const openApiV1Document = {
       name: 'Doctor Queue',
       description: 'Doctor-owned queue reads and lifecycle updates',
     },
+    {
+      name: 'IPD',
+      description: 'Inpatient admission, occupancy, transfer, discharge, and movement-history operations',
+    },
   ],
   components: {
     securitySchemes: {
@@ -729,6 +733,271 @@ export const openApiV1Document = {
           },
           data: {
             $ref: '#/components/schemas/DoctorQueueAppointment',
+          },
+        },
+      },
+      IpdBed: {
+        type: 'object',
+        required: ['id', 'bedNumber', 'wardName', 'roomNumber', 'isActive', 'createdAt', 'updatedAt'],
+        properties: {
+          id: { type: 'string', example: 'bed_1' },
+          bedNumber: { type: 'string', example: 'A-101' },
+          wardName: { type: 'string', example: 'Ward A' },
+          roomNumber: { type: 'string', example: '101' },
+          isActive: { type: 'boolean', example: true },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      IpdOperator: {
+        type: 'object',
+        required: ['id', 'username', 'role', 'isActive'],
+        properties: {
+          id: { type: 'string', example: 'user_reception_1' },
+          username: { type: 'string', example: 'reception' },
+          role: { type: 'string', enum: ['ADMIN', 'RECEPTIONIST', 'DOCTOR'] },
+          isActive: { type: 'boolean', example: true },
+        },
+      },
+      IpdCurrentBedOccupancy: {
+        type: 'object',
+        required: [
+          'id',
+          'admissionId',
+          'bedId',
+          'assignedByUserId',
+          'assignedAt',
+          'lastTransferredAt',
+          'version',
+          'createdAt',
+          'updatedAt',
+          'bed',
+          'assignedByUser',
+        ],
+        properties: {
+          id: { type: 'string', example: 'occupancy_1' },
+          admissionId: { type: 'string', example: 'admission_1' },
+          bedId: { type: 'string', example: 'bed_1' },
+          assignedByUserId: { type: 'string', example: 'user_reception_1' },
+          assignedAt: { type: 'string', format: 'date-time' },
+          lastTransferredAt: { type: 'string', format: 'date-time', nullable: true },
+          version: { type: 'integer', minimum: 1, example: 2 },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          bed: { $ref: '#/components/schemas/IpdBed' },
+          assignedByUser: { $ref: '#/components/schemas/IpdOperator' },
+        },
+      },
+      IpdAdmission: {
+        type: 'object',
+        required: [
+          'id',
+          'patientId',
+          'status',
+          'attendingDoctorUserId',
+          'admittedByUserId',
+          'admittedAt',
+          'dischargeAt',
+          'dischargeNotes',
+          'dischargedByUserId',
+          'notes',
+          'version',
+          'createdAt',
+          'updatedAt',
+          'currentBedOccupancy',
+        ],
+        properties: {
+          id: { type: 'string', example: 'admission_1' },
+          patientId: { type: 'string', example: 'patient_1' },
+          status: { type: 'string', enum: ['ADMITTED', 'DISCHARGED'] },
+          attendingDoctorUserId: { type: 'string', nullable: true, example: 'user_doctor_1' },
+          admittedByUserId: { type: 'string', example: 'user_reception_1' },
+          admittedAt: { type: 'string', format: 'date-time' },
+          dischargeAt: { type: 'string', format: 'date-time', nullable: true },
+          dischargeNotes: { type: 'string', nullable: true, example: 'Recovered and sent home' },
+          dischargedByUserId: { type: 'string', nullable: true, example: 'user_reception_1' },
+          notes: { type: 'string', nullable: true, example: 'Observation required' },
+          version: { type: 'integer', minimum: 1, example: 3 },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          currentBedOccupancy: {
+            allOf: [{ $ref: '#/components/schemas/IpdCurrentBedOccupancy' }],
+            nullable: true,
+          },
+        },
+      },
+      CreateIpdAdmissionRequest: {
+        type: 'object',
+        required: ['patientId'],
+        additionalProperties: false,
+        properties: {
+          patientId: { type: 'string', example: 'patient_1' },
+          attendingDoctorUserId: { type: 'string', example: 'user_doctor_1' },
+          admittedAt: { type: 'string', format: 'date-time', example: '2026-05-15T09:00:00.000Z' },
+          notes: { type: 'string', nullable: true, example: 'Observation required' },
+        },
+      },
+      AssignIpdBedRequest: {
+        type: 'object',
+        required: ['bedId', 'expectedAdmissionVersion'],
+        additionalProperties: false,
+        properties: {
+          bedId: { type: 'string', example: 'bed_1' },
+          expectedAdmissionVersion: { type: 'integer', minimum: 1, example: 1 },
+          note: { type: 'string', nullable: true, example: 'Initial assignment' },
+        },
+      },
+      TransferIpdBedRequest: {
+        type: 'object',
+        required: ['targetBedId', 'expectedAdmissionVersion', 'expectedOccupancyVersion'],
+        additionalProperties: false,
+        properties: {
+          targetBedId: { type: 'string', example: 'bed_2' },
+          expectedAdmissionVersion: { type: 'integer', minimum: 1, example: 2 },
+          expectedOccupancyVersion: { type: 'integer', minimum: 1, example: 1 },
+          note: { type: 'string', nullable: true, example: 'Escalated to monitored room' },
+        },
+      },
+      DischargeIpdAdmissionRequest: {
+        type: 'object',
+        required: ['expectedAdmissionVersion'],
+        additionalProperties: false,
+        properties: {
+          expectedAdmissionVersion: { type: 'integer', minimum: 1, example: 3 },
+          expectedOccupancyVersion: { type: 'integer', minimum: 1, example: 2 },
+          dischargedAt: { type: 'string', format: 'date-time', example: '2026-05-16T11:15:00.000Z' },
+          dischargeNotes: { type: 'string', nullable: true, example: 'Recovered and sent home' },
+          movementNote: { type: 'string', nullable: true, example: 'Bed released after discharge' },
+        },
+        description:
+          'When the admission currently has a bed assignment, expectedOccupancyVersion is required so discharge fails closed on stale occupancy state.',
+      },
+      IpdBedMovement: {
+        type: 'object',
+        required: [
+          'id',
+          'admissionId',
+          'movementType',
+          'fromBedId',
+          'toBedId',
+          'movedByUserId',
+          'movedAt',
+          'note',
+          'createdAt',
+          'fromBed',
+          'toBed',
+          'movedByUser',
+        ],
+        properties: {
+          id: { type: 'string', example: 'movement_1' },
+          admissionId: { type: 'string', example: 'admission_1' },
+          movementType: { type: 'string', enum: ['ASSIGNED', 'TRANSFERRED', 'DISCHARGED'] },
+          fromBedId: { type: 'string', nullable: true, example: 'bed_1' },
+          toBedId: { type: 'string', nullable: true, example: 'bed_2' },
+          movedByUserId: { type: 'string', example: 'user_reception_1' },
+          movedAt: { type: 'string', format: 'date-time' },
+          note: { type: 'string', nullable: true, example: 'Escalated to monitored room' },
+          createdAt: { type: 'string', format: 'date-time' },
+          fromBed: { allOf: [{ $ref: '#/components/schemas/IpdBed' }], nullable: true },
+          toBed: { allOf: [{ $ref: '#/components/schemas/IpdBed' }], nullable: true },
+          movedByUser: { $ref: '#/components/schemas/IpdOperator' },
+        },
+      },
+      IpdAdmissionEnvelope: {
+        type: 'object',
+        required: ['success', 'data'],
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { $ref: '#/components/schemas/IpdAdmission' },
+        },
+      },
+      IpdAdmissionMutationResult: {
+        type: 'object',
+        required: ['admission', 'movement'],
+        properties: {
+          admission: { $ref: '#/components/schemas/IpdAdmission' },
+          movement: { allOf: [{ $ref: '#/components/schemas/IpdBedMovement' }], nullable: true },
+        },
+      },
+      IpdAdmissionMutationEnvelope: {
+        type: 'object',
+        required: ['success', 'data'],
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { $ref: '#/components/schemas/IpdAdmissionMutationResult' },
+        },
+      },
+      IpdMovementHistoryEnvelope: {
+        type: 'object',
+        required: ['success', 'data'],
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/IpdBedMovement' },
+          },
+        },
+      },
+      IpdOccupancyEntry: {
+        type: 'object',
+        required: [
+          'id',
+          'admissionId',
+          'bedId',
+          'assignedByUserId',
+          'assignedAt',
+          'lastTransferredAt',
+          'version',
+          'createdAt',
+          'updatedAt',
+          'bed',
+          'assignedByUser',
+          'admission',
+        ],
+        properties: {
+          id: { type: 'string', example: 'occupancy_1' },
+          admissionId: { type: 'string', example: 'admission_1' },
+          bedId: { type: 'string', example: 'bed_1' },
+          assignedByUserId: { type: 'string', example: 'user_reception_1' },
+          assignedAt: { type: 'string', format: 'date-time' },
+          lastTransferredAt: { type: 'string', format: 'date-time', nullable: true },
+          version: { type: 'integer', minimum: 1, example: 2 },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          bed: { $ref: '#/components/schemas/IpdBed' },
+          assignedByUser: { $ref: '#/components/schemas/IpdOperator' },
+          admission: {
+            type: 'object',
+            required: ['id', 'patientId', 'status', 'admittedAt', 'dischargeAt', 'version', 'patient'],
+            properties: {
+              id: { type: 'string', example: 'admission_1' },
+              patientId: { type: 'string', example: 'patient_1' },
+              status: { type: 'string', enum: ['ADMITTED', 'DISCHARGED'] },
+              admittedAt: { type: 'string', format: 'date-time' },
+              dischargeAt: { type: 'string', format: 'date-time', nullable: true },
+              version: { type: 'integer', minimum: 1, example: 3 },
+              patient: {
+                type: 'object',
+                required: ['id', 'registrationNumber', 'fullName', 'primaryPhone'],
+                properties: {
+                  id: { type: 'string', example: 'patient_1' },
+                  registrationNumber: { type: 'string', example: 'REG-1' },
+                  fullName: { type: 'string', example: 'Jane Doe' },
+                  primaryPhone: { type: 'string', example: '+1555000111' },
+                },
+              },
+            },
+          },
+        },
+      },
+      IpdOccupancyEnvelope: {
+        type: 'object',
+        required: ['success', 'data'],
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/IpdOccupancyEntry' },
           },
         },
       },
@@ -1656,6 +1925,344 @@ export const openApiV1Document = {
                 },
               },
             },
+          },
+        },
+      },
+    },
+    '/ipd/admissions': {
+      post: {
+        tags: ['IPD'],
+        summary: 'Admit a patient into the inpatient lifecycle',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/CreateIpdAdmissionRequest',
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Admission created successfully with an admitted status and no current bed assignment.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/IpdAdmissionEnvelope',
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Request body validation failed.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorEnvelope' },
+              },
+            },
+          },
+          '401': {
+            description: 'Bearer token is missing, invalid, or expired.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorEnvelope' },
+              },
+            },
+          },
+          '403': {
+            description: 'Authenticated principal is not permitted to operate IPD lifecycle routes.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorEnvelope' },
+              },
+            },
+          },
+          '404': {
+            description: 'Referenced patient or attending doctor principal was not found.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorEnvelope' },
+              },
+            },
+          },
+          '422': {
+            description: 'Referenced attending doctor exists but is not an active doctor principal.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorEnvelope' },
+              },
+            },
+          },
+          '503': {
+            description: 'IPD persistence is temporarily unavailable.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorEnvelope' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/ipd/admissions/{admissionId}/bed-assignment': {
+      post: {
+        tags: ['IPD'],
+        summary: 'Assign a current bed to an admitted inpatient',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'admissionId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Admission identifier.',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/AssignIpdBedRequest' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Bed assignment succeeded and returns the updated admission plus append-only movement record.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/IpdAdmissionMutationEnvelope' },
+              },
+            },
+          },
+          '400': {
+            description: 'Request body or path validation failed.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '401': {
+            description: 'Bearer token is missing, invalid, or expired.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '403': {
+            description: 'Authenticated principal is not permitted to operate IPD lifecycle routes.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '404': {
+            description: 'Admission or bed was not found.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '409': {
+            description: 'Admission version check failed or the target bed is already occupied.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '422': {
+            description: 'The admission is not in a state that can receive a bed or the target bed is inactive.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '503': {
+            description: 'IPD persistence is temporarily unavailable.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+        },
+      },
+    },
+    '/ipd/admissions/{admissionId}/bed-transfer': {
+      post: {
+        tags: ['IPD'],
+        summary: 'Transfer an admitted inpatient between beds with optimistic concurrency guards',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'admissionId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Admission identifier.',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/TransferIpdBedRequest' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Transfer succeeded and returns the updated admission plus transfer movement record.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/IpdAdmissionMutationEnvelope' },
+              },
+            },
+          },
+          '400': {
+            description: 'Request body or path validation failed.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '401': {
+            description: 'Bearer token is missing, invalid, or expired.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '403': {
+            description: 'Authenticated principal is not permitted to operate IPD lifecycle routes.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '404': {
+            description: 'Admission or target bed was not found.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '409': {
+            description: 'Admission or occupancy version check failed, or the target bed is already occupied.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '422': {
+            description: 'The admission cannot transfer, has no current bed, targets the same bed, or the target bed is inactive.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '503': {
+            description: 'IPD persistence is temporarily unavailable.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+        },
+      },
+    },
+    '/ipd/admissions/{admissionId}/discharge': {
+      post: {
+        tags: ['IPD'],
+        summary: 'Discharge an admitted inpatient and release the current bed when present',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'admissionId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Admission identifier.',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/DischargeIpdAdmissionRequest' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Discharge succeeded and returns the updated admission plus discharge movement when a bed was released.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/IpdAdmissionMutationEnvelope' },
+              },
+            },
+          },
+          '400': {
+            description: 'Request body or path validation failed.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '401': {
+            description: 'Bearer token is missing, invalid, or expired.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '403': {
+            description: 'Authenticated principal is not permitted to operate IPD lifecycle routes.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '404': {
+            description: 'Admission was not found.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '409': {
+            description: 'Admission or occupancy version check failed during discharge.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '422': {
+            description: 'The admission is not in a dischargeable state.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '503': {
+            description: 'IPD persistence is temporarily unavailable.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+        },
+      },
+    },
+    '/ipd/occupancy': {
+      get: {
+        tags: ['IPD'],
+        summary: 'List the current truthful bed occupancy state across active inpatient admissions',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Current occupied beds ordered by assignedAt then id, including the minimal patient context needed for shell occupancy views.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/IpdOccupancyEnvelope' },
+              },
+            },
+          },
+          '401': {
+            description: 'Bearer token is missing, invalid, or expired.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '403': {
+            description: 'Authenticated principal is not permitted to operate IPD lifecycle routes.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '503': {
+            description: 'IPD persistence is temporarily unavailable.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+        },
+      },
+    },
+    '/ipd/admissions/{admissionId}/movements': {
+      get: {
+        tags: ['IPD'],
+        summary: 'List append-only bed movement history for one inpatient admission',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'admissionId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Admission identifier.',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Movement history ordered by movedAt then id.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/IpdMovementHistoryEnvelope' },
+              },
+            },
+          },
+          '400': {
+            description: 'Path validation failed.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '401': {
+            description: 'Bearer token is missing, invalid, or expired.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '403': {
+            description: 'Authenticated principal is not permitted to operate IPD lifecycle routes.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '404': {
+            description: 'Admission was not found.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '503': {
+            description: 'IPD persistence is temporarily unavailable.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
           },
         },
       },

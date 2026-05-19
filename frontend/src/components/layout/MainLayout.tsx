@@ -1,5 +1,6 @@
 import {
   Activity,
+  BedDouble,
   Bell,
   CalendarDays,
   CalendarRange,
@@ -49,6 +50,12 @@ const navGroups: Array<{
         to: '/app/reception/scheduling',
       },
       {
+        icon: BedDouble,
+        label: 'Inpatients',
+        roles: ['receptionist', 'admin'],
+        to: '/app/reception/inpatients',
+      },
+      {
         icon: Activity,
         label: 'Doctor Queue',
         roles: ['doctor', 'admin'],
@@ -78,6 +85,7 @@ const navGroups: Array<{
 const titles: Record<string, string> = {
   '/app/admin': 'Hospital Dashboard',
   '/app/doctor/queue': 'Doctor Queue',
+  '/app/reception/inpatients': 'Inpatient Workspace',
   '/app/reception/scheduling': 'Scheduling Dashboard',
 };
 

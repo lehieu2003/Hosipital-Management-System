@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { SchedulingPage } from '@/features/appointments/SchedulingPage';
 import { LoginPage, ProtectedRoute, resolveHomePath, useAuth } from '@/features/auth';
+import { InpatientsPage } from '@/features/ipd/InpatientsPage';
 import { LandingPage } from '@/features/landing/LandingPage';
 import { AdminOverviewPage } from '@/features/opd/AdminOverviewPage';
 import { QueuePage } from '@/features/queue/QueuePage';
@@ -46,6 +47,14 @@ export function App() {
             </ProtectedRoute>
           }
           path="reception/scheduling"
+        />
+        <Route
+          element={
+            <ProtectedRoute allowedRoles={['receptionist', 'admin']}>
+              <InpatientsPage />
+            </ProtectedRoute>
+          }
+          path="reception/inpatients"
         />
         <Route
           element={

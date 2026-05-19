@@ -12,6 +12,7 @@ const contractFiles = {
   dbClient: path.join(backendRoot, 'src', 'infrastructure', 'database', 'client.ts'),
   authRepository: path.join(backendRoot, 'src', 'domain', 'repositories', 'auth.repository.ts'),
   opdRepository: path.join(backendRoot, 'src', 'domain', 'repositories', 'opd.repository.ts'),
+  ipdRepository: path.join(backendRoot, 'src', 'domain', 'repositories', 'ipd.repository.ts'),
   packageJson: path.join(backendRoot, 'package.json'),
 } as const;
 
@@ -71,12 +72,44 @@ describe('authoritative Node persistence contract', () => {
       '@prisma/client dependency',
     );
     expectIncludes(packageSource, '"prisma"', contractFiles.packageJson, 'prisma dependency');
+    expectIncludes(
+      schemaSource,
+      'enum InpatientAdmissionStatus',
+      contractFiles.prismaSchema,
+      'inpatient admission status enum',
+    );
+    expectIncludes(
+      schemaSource,
+      'enum BedMovementType',
+      contractFiles.prismaSchema,
+      'bed movement type enum',
+    );
+    expectIncludes(
+      schemaSource,
+      'model InpatientAdmission',
+      contractFiles.prismaSchema,
+      'inpatient admission model',
+    );
+    expectIncludes(schemaSource, 'model Bed', contractFiles.prismaSchema, 'bed inventory model');
+    expectIncludes(
+      schemaSource,
+      'model BedOccupancy',
+      contractFiles.prismaSchema,
+      'current occupancy model',
+    );
+    expectIncludes(
+      schemaSource,
+      'model InpatientBedMovement',
+      contractFiles.prismaSchema,
+      'append-only bed movement history model',
+    );
   });
 
-  it('proves the shared Prisma client singleton is the only auth/OPD repository seam', () => {
+  it('proves the shared Prisma client singleton is the only auth/OPD/IPD repository seam', () => {
     const clientSource = readTrackedSource(contractFiles.dbClient);
     const authRepositorySource = readTrackedSource(contractFiles.authRepository);
     const opdRepositorySource = readTrackedSource(contractFiles.opdRepository);
+    const ipdRepositorySource = readTrackedSource(contractFiles.ipdRepository);
 
     expectIncludes(
       clientSource,
@@ -112,6 +145,7 @@ describe('authoritative Node persistence contract', () => {
     for (const [repositoryPath, repositorySource] of [
       [contractFiles.authRepository, authRepositorySource],
       [contractFiles.opdRepository, opdRepositorySource],
+      [contractFiles.ipdRepository, ipdRepositorySource],
     ] as const) {
       expectIncludes(
         repositorySource,
@@ -151,10 +185,22 @@ describe('authoritative Node persistence contract', () => {
       contractFiles.opdRepository,
       'shared db transaction seam',
     );
+    expectMatches(
+      ipdRepositorySource,
+      /await\s+db\.inpatientAdmission\.create\(/,
+      contractFiles.ipdRepository,
+      'shared db inpatient admission write seam',
+    );
+    expectMatches(
+      ipdRepositorySource,
+      /await\s+db\.\$transaction\(/,
+      contractFiles.ipdRepository,
+      'shared db IPD transaction seam',
+    );
   });
 
-  it('fails closed if direct SQL or driver APIs appear in the authoritative auth/OPD repositories', () => {
-    for (const repositoryPath of [contractFiles.authRepository, contractFiles.opdRepository]) {
+  it('fails closed if direct SQL or driver APIs appear in the authoritative auth/OPD/IPD repositories', () => {
+    for (const repositoryPath of [contractFiles.authRepository, contractFiles.opdRepository, contractFiles.ipdRepository]) {
       const repositorySource = readTrackedSource(repositoryPath);
 
       for (const forbiddenDriverImport of [

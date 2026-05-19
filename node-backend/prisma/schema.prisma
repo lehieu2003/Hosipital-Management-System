@@ -28,18 +28,34 @@ enum AppointmentStatus {
   NO_SHOW
 }
 
+enum InpatientAdmissionStatus {
+  ADMITTED
+  DISCHARGED
+}
+
+enum BedMovementType {
+  ASSIGNED
+  TRANSFERRED
+  DISCHARGED
+}
+
 model User {
-  id                  String           @id @default(cuid())
-  username            String           @unique
-  passwordHash        String           @map("password_hash")
-  role                UserRole
-  isActive            Boolean          @default(true) @map("is_active")
-  createdAt           DateTime         @default(now()) @map("created_at")
-  updatedAt           DateTime         @updatedAt @map("updated_at")
-  refreshTokens       RefreshSession[]
-  registeredPatients  Patient[]        @relation("RegisteredPatients")
-  doctorAppointments  Appointment[]    @relation("DoctorAppointments")
-  assignedDepartment  Department?      @relation("AssignedDepartmentDoctor")
+  id                           String                 @id @default(cuid())
+  username                     String                 @unique
+  passwordHash                 String                 @map("password_hash")
+  role                         UserRole
+  isActive                     Boolean                @default(true) @map("is_active")
+  createdAt                    DateTime               @default(now()) @map("created_at")
+  updatedAt                    DateTime               @updatedAt @map("updated_at")
+  refreshTokens                RefreshSession[]
+  registeredPatients           Patient[]              @relation("RegisteredPatients")
+  doctorAppointments           Appointment[]          @relation("DoctorAppointments")
+  assignedDepartment           Department?            @relation("AssignedDepartmentDoctor")
+  admittedInpatientAdmissions  InpatientAdmission[]   @relation("AdmittedByUser")
+  dischargedInpatientAdmissions InpatientAdmission[]  @relation("DischargedByUser")
+  attendingInpatientAdmissions InpatientAdmission[]   @relation("AttendingDoctorAdmissions")
+  managedBedOccupancies        BedOccupancy[]         @relation("BedOccupancyManagedByUser")
+  inpatientBedMovements        InpatientBedMovement[] @relation("BedMovementPerformedByUser")
 
   @@map("users")
   @@index([username], map: "idx_users_username")
@@ -77,19 +93,20 @@ model Department {
 }
 
 model Patient {
-  id                 String         @id @default(cuid())
-  registrationNumber String         @unique @default(cuid()) @map("registration_number")
-  fullName           String         @map("full_name")
-  primaryPhone       String         @map("primary_phone")
+  id                 String               @id @default(cuid())
+  registrationNumber String               @unique @default(cuid()) @map("registration_number")
+  fullName           String               @map("full_name")
+  primaryPhone       String               @map("primary_phone")
   email              String?
-  dateOfBirth        DateTime?      @map("date_of_birth")
+  dateOfBirth        DateTime?            @map("date_of_birth")
   gender             PatientGender?
   address            String?
-  createdByUserId    String         @map("created_by_user_id")
-  createdByUser      User           @relation("RegisteredPatients", fields: [createdByUserId], references: [id], onDelete: Restrict)
-  createdAt          DateTime       @default(now()) @map("created_at")
-  updatedAt          DateTime       @updatedAt @map("updated_at")
+  createdByUserId    String               @map("created_by_user_id")
+  createdByUser      User                 @relation("RegisteredPatients", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
   appointments       Appointment[]
+  inpatientAdmissions InpatientAdmission[]
 
   @@map("patients")
   @@index([fullName], map: "idx_patients_full_name")
@@ -113,4 +130,92 @@ model Appointment {
   @@map("appointments")
   @@index([patientId], map: "idx_appointments_patient_id")
   @@index([doctorUserId, scheduledAt], map: "idx_appointments_doctor_scheduled_at")
+}
+
+model InpatientAdmission {
+  id                  String                   @id @default(cuid())
+  patientId           String                   @map("patient_id")
+  patient             Patient                  @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  status              InpatientAdmissionStatus @default(ADMITTED)
+  attendingDoctorUserId String?                @map("attending_doctor_user_id")
+  attendingDoctor     User?                    @relation("AttendingDoctorAdmissions", fields: [attendingDoctorUserId], references: [id], onDelete: SetNull)
+  admittedByUserId    String                   @map("admitted_by_user_id")
+  admittedByUser      User                     @relation("AdmittedByUser", fields: [admittedByUserId], references: [id], onDelete: Restrict)
+  admittedAt          DateTime                 @default(now()) @map("admitted_at")
+  dischargeAt         DateTime?                @map("discharged_at")
+  dischargeNotes      String?                  @map("discharge_notes")
+  dischargedByUserId  String?                  @map("discharged_by_user_id")
+  dischargedByUser    User?                    @relation("DischargedByUser", fields: [dischargedByUserId], references: [id], onDelete: SetNull)
+  notes               String?
+  version             Int                      @default(1)
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+  currentBedOccupancy BedOccupancy?            @relation("AdmissionCurrentBedOccupancy")
+  bedMovements        InpatientBedMovement[]
+
+  @@map("inpatient_admissions")
+  @@index([patientId], map: "idx_inpatient_admissions_patient_id")
+  @@index([status, admittedAt], map: "idx_inpatient_admissions_status_admitted_at")
+  @@index([attendingDoctorUserId], map: "idx_inpatient_admissions_attending_doctor_user_id")
+  @@index([admittedByUserId], map: "idx_inpatient_admissions_admitted_by_user_id")
+  @@index([dischargedByUserId], map: "idx_inpatient_admissions_discharged_by_user_id")
+}
+
+model Bed {
+  id              String                @id @default(cuid())
+  bedNumber       String                @unique @map("bed_number")
+  wardName        String                @map("ward_name")
+  roomNumber      String?               @map("room_number")
+  isActive        Boolean               @default(true) @map("is_active")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+  currentOccupancy BedOccupancy?        @relation("BedCurrentOccupancy")
+  movementFrom    InpatientBedMovement[] @relation("MovementFromBed")
+  movementTo      InpatientBedMovement[] @relation("MovementToBed")
+
+  @@map("beds")
+  @@index([wardName, roomNumber], map: "idx_beds_ward_room")
+  @@index([isActive], map: "idx_beds_is_active")
+}
+
+model BedOccupancy {
+  id               String             @id @default(cuid())
+  admissionId      String             @unique @map("admission_id")
+  admission        InpatientAdmission @relation("AdmissionCurrentBedOccupancy", fields: [admissionId], references: [id], onDelete: Cascade)
+  bedId            String             @unique @map("bed_id")
+  bed              Bed                @relation("BedCurrentOccupancy", fields: [bedId], references: [id], onDelete: Restrict)
+  assignedByUserId String             @map("assigned_by_user_id")
+  assignedByUser   User               @relation("BedOccupancyManagedByUser", fields: [assignedByUserId], references: [id], onDelete: Restrict)
+  assignedAt       DateTime           @default(now()) @map("assigned_at")
+  lastTransferredAt DateTime?         @map("last_transferred_at")
+  version          Int                @default(1)
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  @@map("bed_occupancies")
+  @@index([admissionId], map: "idx_bed_occupancies_admission_id")
+  @@index([bedId], map: "idx_bed_occupancies_bed_id")
+  @@index([assignedByUserId], map: "idx_bed_occupancies_assigned_by_user_id")
+}
+
+model InpatientBedMovement {
+  id           String             @id @default(cuid())
+  admissionId  String             @map("admission_id")
+  admission    InpatientAdmission @relation(fields: [admissionId], references: [id], onDelete: Cascade)
+  movementType BedMovementType    @map("movement_type")
+  fromBedId    String?            @map("from_bed_id")
+  fromBed      Bed?               @relation("MovementFromBed", fields: [fromBedId], references: [id], onDelete: SetNull)
+  toBedId      String?            @map("to_bed_id")
+  toBed        Bed?               @relation("MovementToBed", fields: [toBedId], references: [id], onDelete: SetNull)
+  movedByUserId String            @map("moved_by_user_id")
+  movedByUser  User               @relation("BedMovementPerformedByUser", fields: [movedByUserId], references: [id], onDelete: Restrict)
+  movedAt      DateTime           @default(now()) @map("moved_at")
+  note         String?
+  createdAt    DateTime           @default(now()) @map("created_at")
+
+  @@map("inpatient_bed_movements")
+  @@index([admissionId, movedAt], map: "idx_inpatient_bed_movements_admission_moved_at")
+  @@index([fromBedId], map: "idx_inpatient_bed_movements_from_bed_id")
+  @@index([toBedId], map: "idx_inpatient_bed_movements_to_bed_id")
+  @@index([movedByUserId], map: "idx_inpatient_bed_movements_moved_by_user_id")
 }

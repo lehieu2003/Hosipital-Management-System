@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "test": "node ./scripts/run-vitest.mjs",
     "test:watch": "node ./scripts/run-vitest.mjs --watch",
+    "verify:s01:live": "node ./scripts/verify-s01-live.mjs",
     "verify:s15:live": "node ./scripts/verify-s15-live.mjs",
     "verify:s16:live": "node ./scripts/verify-s16-live.mjs",
     "verify:s17:live": "node ./scripts/verify-s17-live.mjs",

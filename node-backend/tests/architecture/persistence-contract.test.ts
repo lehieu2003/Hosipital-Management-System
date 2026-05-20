@@ -11,8 +11,18 @@ const contractFiles = {
   prismaSchema: path.join(backendRoot, 'prisma', 'schema.prisma'),
   dbClient: path.join(backendRoot, 'src', 'infrastructure', 'database', 'client.ts'),
   authRepository: path.join(backendRoot, 'src', 'domain', 'repositories', 'auth.repository.ts'),
+  authUsers: path.join(backendRoot, 'src', 'domain', 'repositories', 'auth', 'auth.users.ts'),
+  authRefreshSessions: path.join(backendRoot, 'src', 'domain', 'repositories', 'auth', 'auth.refresh-sessions.ts'),
   opdRepository: path.join(backendRoot, 'src', 'domain', 'repositories', 'opd.repository.ts'),
+  opdPatients: path.join(backendRoot, 'src', 'domain', 'repositories', 'opd', 'opd.patients.ts'),
+  opdDepartments: path.join(backendRoot, 'src', 'domain', 'repositories', 'opd', 'opd.departments.ts'),
+  opdAppointments: path.join(backendRoot, 'src', 'domain', 'repositories', 'opd', 'opd.appointments.ts'),
   ipdRepository: path.join(backendRoot, 'src', 'domain', 'repositories', 'ipd.repository.ts'),
+  ipdQueries: path.join(backendRoot, 'src', 'domain', 'repositories', 'ipd', 'ipd.queries.ts'),
+  ipdBedWorkflows: path.join(backendRoot, 'src', 'domain', 'repositories', 'ipd', 'ipd.bed-workflows.ts'),
+  billingRepository: path.join(backendRoot, 'src', 'domain', 'repositories', 'billing.repository.ts'),
+  billingQueries: path.join(backendRoot, 'src', 'domain', 'repositories', 'billing', 'billing.queries.ts'),
+  billingWorkflows: path.join(backendRoot, 'src', 'domain', 'repositories', 'billing', 'billing.workflows.ts'),
   packageJson: path.join(backendRoot, 'package.json'),
 } as const;
 
@@ -108,8 +118,18 @@ describe('authoritative Node persistence contract', () => {
   it('proves the shared Prisma client singleton is the only auth/OPD/IPD repository seam', () => {
     const clientSource = readTrackedSource(contractFiles.dbClient);
     const authRepositorySource = readTrackedSource(contractFiles.authRepository);
+    const authUsersSource = readTrackedSource(contractFiles.authUsers);
+    const authRefreshSessionsSource = readTrackedSource(contractFiles.authRefreshSessions);
     const opdRepositorySource = readTrackedSource(contractFiles.opdRepository);
+    const opdPatientsSource = readTrackedSource(contractFiles.opdPatients);
+    const opdDepartmentsSource = readTrackedSource(contractFiles.opdDepartments);
+    const opdAppointmentsSource = readTrackedSource(contractFiles.opdAppointments);
     const ipdRepositorySource = readTrackedSource(contractFiles.ipdRepository);
+    const ipdQueriesSource = readTrackedSource(contractFiles.ipdQueries);
+    const ipdBedWorkflowsSource = readTrackedSource(contractFiles.ipdBedWorkflows);
+    const billingRepositorySource = readTrackedSource(contractFiles.billingRepository);
+    const billingQueriesSource = readTrackedSource(contractFiles.billingQueries);
+    const billingWorkflowsSource = readTrackedSource(contractFiles.billingWorkflows);
 
     expectIncludes(
       clientSource,
@@ -142,14 +162,56 @@ describe('authoritative Node persistence contract', () => {
       'non-production singleton caching',
     );
 
-    for (const [repositoryPath, repositorySource] of [
-      [contractFiles.authRepository, authRepositorySource],
-      [contractFiles.opdRepository, opdRepositorySource],
-      [contractFiles.ipdRepository, ipdRepositorySource],
+    for (const [repositoryPath, repositorySource, dbImport] of [
+      [
+        contractFiles.authUsers,
+        authUsersSource,
+        "import { db } from '../../../infrastructure/database/client.js';",
+      ],
+      [
+        contractFiles.authRefreshSessions,
+        authRefreshSessionsSource,
+        "import { db } from '../../../infrastructure/database/client.js';",
+      ],
+      [
+        contractFiles.opdPatients,
+        opdPatientsSource,
+        "import { db } from '../../../infrastructure/database/client.js';",
+      ],
+      [
+        contractFiles.opdDepartments,
+        opdDepartmentsSource,
+        "import { db } from '../../../infrastructure/database/client.js';",
+      ],
+      [
+        contractFiles.opdAppointments,
+        opdAppointmentsSource,
+        "import { db } from '../../../infrastructure/database/client.js';",
+      ],
+      [
+        contractFiles.ipdQueries,
+        ipdQueriesSource,
+        "import { db } from '../../../infrastructure/database/client.js';",
+      ],
+      [
+        contractFiles.ipdBedWorkflows,
+        ipdBedWorkflowsSource,
+        "import { db } from '../../../infrastructure/database/client.js';",
+      ],
+      [
+        contractFiles.billingQueries,
+        billingQueriesSource,
+        "import { db } from '../../../infrastructure/database/client.js';",
+      ],
+      [
+        contractFiles.billingWorkflows,
+        billingWorkflowsSource,
+        "import { db } from '../../../infrastructure/database/client.js';",
+      ],
     ] as const) {
       expectIncludes(
         repositorySource,
-        "import { db } from '../../infrastructure/database/client.js';",
+        dbImport,
         repositoryPath,
         'shared db client import',
       );
@@ -167,40 +229,133 @@ describe('authoritative Node persistence contract', () => {
       );
     }
 
-    expectMatches(
+    expectIncludes(
       authRepositorySource,
-      /await\s+db\.user\.findUnique\(/,
+      "import { AuthUserQueries } from './auth/auth.users.js';",
       contractFiles.authRepository,
+      'Auth user module facade import',
+    );
+    expectIncludes(
+      authRepositorySource,
+      "import { AuthRefreshSessionQueries } from './auth/auth.refresh-sessions.js';",
+      contractFiles.authRepository,
+      'Auth refresh-session module facade import',
+    );
+    expectIncludes(
+      opdRepositorySource,
+      "import { OpdPatientQueries } from './opd/opd.patients.js';",
+      contractFiles.opdRepository,
+      'OPD patient module facade import',
+    );
+    expectIncludes(
+      opdRepositorySource,
+      "import { OpdDepartmentQueries } from './opd/opd.departments.js';",
+      contractFiles.opdRepository,
+      'OPD department module facade import',
+    );
+    expectIncludes(
+      opdRepositorySource,
+      "import { OpdAppointmentQueries } from './opd/opd.appointments.js';",
+      contractFiles.opdRepository,
+      'OPD appointment module facade import',
+    );
+    expectIncludes(
+      ipdRepositorySource,
+      "import { IpdQueries } from './ipd/ipd.queries.js';",
+      contractFiles.ipdRepository,
+      'IPD query module facade import',
+    );
+    expectIncludes(
+      ipdRepositorySource,
+      "import { IpdBedWorkflows } from './ipd/ipd.bed-workflows.js';",
+      contractFiles.ipdRepository,
+      'IPD workflow module facade import',
+    );
+    expectIncludes(
+      billingRepositorySource,
+      "import { BillingQueries } from './billing/billing.queries.js';",
+      contractFiles.billingRepository,
+      'Billing query module facade import',
+    );
+    expectIncludes(
+      billingRepositorySource,
+      "BillingWorkflows",
+      contractFiles.billingRepository,
+      'Billing workflow module facade import',
+    );
+
+    expectMatches(
+      authUsersSource,
+      /await\s+db\.user\.findUnique\(/,
+      contractFiles.authUsers,
       'shared db user lookup seam',
     );
     expectMatches(
-      opdRepositorySource,
+      authRefreshSessionsSource,
+      /await\s+db\.refreshSession\.findUnique\(/,
+      contractFiles.authRefreshSessions,
+      'shared db refresh-session lookup seam',
+    );
+    expectMatches(
+      opdPatientsSource,
       /await\s+db\.patient\.create\(/,
-      contractFiles.opdRepository,
+      contractFiles.opdPatients,
       'shared db patient write seam',
     );
     expectMatches(
-      opdRepositorySource,
+      opdDepartmentsSource,
       /await\s+db\.\$transaction\(/,
-      contractFiles.opdRepository,
-      'shared db transaction seam',
+      contractFiles.opdDepartments,
+      'shared db OPD department transaction seam',
     );
     expectMatches(
-      ipdRepositorySource,
+      opdAppointmentsSource,
+      /await\s+db\.\$transaction\(/,
+      contractFiles.opdAppointments,
+      'shared db OPD appointment transaction seam',
+    );
+    expectMatches(
+      ipdQueriesSource,
       /await\s+db\.inpatientAdmission\.create\(/,
-      contractFiles.ipdRepository,
+      contractFiles.ipdQueries,
       'shared db inpatient admission write seam',
     );
     expectMatches(
-      ipdRepositorySource,
+      ipdBedWorkflowsSource,
       /await\s+db\.\$transaction\(/,
-      contractFiles.ipdRepository,
+      contractFiles.ipdBedWorkflows,
       'shared db IPD transaction seam',
+    );
+    expectMatches(
+      billingQueriesSource,
+      /await\s+db\.billingInvoice\.findUnique\(/,
+      contractFiles.billingQueries,
+      'shared db billing invoice lookup seam',
+    );
+    expectMatches(
+      billingWorkflowsSource,
+      /await\s+db\.\$transaction\(/,
+      contractFiles.billingWorkflows,
+      'shared db billing transaction seam',
     );
   });
 
-  it('fails closed if direct SQL or driver APIs appear in the authoritative auth/OPD/IPD repositories', () => {
-    for (const repositoryPath of [contractFiles.authRepository, contractFiles.opdRepository, contractFiles.ipdRepository]) {
+  it('fails closed if direct SQL or driver APIs appear in the authoritative auth/OPD/IPD/billing repositories', () => {
+    for (const repositoryPath of [
+      contractFiles.authRepository,
+      contractFiles.authUsers,
+      contractFiles.authRefreshSessions,
+      contractFiles.opdRepository,
+      contractFiles.opdPatients,
+      contractFiles.opdDepartments,
+      contractFiles.opdAppointments,
+      contractFiles.ipdRepository,
+      contractFiles.ipdQueries,
+      contractFiles.ipdBedWorkflows,
+      contractFiles.billingRepository,
+      contractFiles.billingQueries,
+      contractFiles.billingWorkflows,
+    ]) {
       const repositorySource = readTrackedSource(repositoryPath);
 
       for (const forbiddenDriverImport of [

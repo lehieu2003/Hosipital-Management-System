@@ -1,119 +1,30 @@
-import { UserRole, type RefreshSession, type User } from '@prisma/client';
-
-import { db } from '../../infrastructure/database/client.js';
-import { ERROR_CODES } from '../../shared/constants/error-codes.js';
-import { AppError } from '../../shared/errors/app-error.js';
-import { logger } from '../../shared/utils/logger.js';
-
-type CreateRefreshSessionInput = {
-  tokenJti: string;
-  tokenHash: string;
-  userId: string;
-  expiresAt: Date;
-};
-
-const wrapAuthStoreError = (action: string, error: unknown): never => {
-  if (error instanceof AppError) {
-    throw error;
-  }
-
-  logger.error({ action, error }, 'auth_repository_failed');
-  throw new AppError('Authentication temporarily unavailable', 503, ERROR_CODES.authUnavailable);
-};
+import { AuthRefreshSessionQueries } from './auth/auth.refresh-sessions.js';
+import { AuthUserQueries } from './auth/auth.users.js';
 
 class AuthRepository {
-  async findUserByUsername(username: string) {
-    try {
-      return await db.user.findUnique({
-        where: { username },
-      });
-    } catch (error) {
-      return wrapAuthStoreError('find_user_by_username', error);
-    }
-  }
+  private readonly users = new AuthUserQueries();
+  private readonly refreshSessions = new AuthRefreshSessionQueries();
 
-  async findUserById(id: string) {
-    try {
-      return await db.user.findUnique({
-        where: { id },
-      });
-    } catch (error) {
-      return wrapAuthStoreError('find_user_by_id', error);
-    }
-  }
+  findUserByUsername =
+    this.users.findUserByUsername.bind(this.users);
+  findUserById = this.users.findUserById.bind(this.users);
+  createUser = this.users.createUser.bind(this.users);
 
-  async createUser(data: {
-    username: string;
-    passwordHash: string;
-    role: UserRole;
-    isActive?: boolean;
-  }) {
-    try {
-      return await db.user.create({
-        data,
-      });
-    } catch (error) {
-      return wrapAuthStoreError('create_user', error);
-    }
-  }
-
-  async createRefreshSession(data: CreateRefreshSessionInput) {
-    try {
-      return await db.refreshSession.create({
-        data,
-      });
-    } catch (error) {
-      return wrapAuthStoreError('create_refresh_session', error);
-    }
-  }
-
-  async findRefreshSessionByJti(tokenJti: string) {
-    try {
-      return await db.refreshSession.findUnique({
-        where: { tokenJti },
-        include: { user: true },
-      });
-    } catch (error) {
-      return wrapAuthStoreError('find_refresh_session_by_jti', error);
-    }
-  }
-
-  async revokeRefreshSession(tokenJti: string, revokeReason: string, replacedByJti?: string) {
-    try {
-      return await db.refreshSession.updateMany({
-        where: {
-          tokenJti,
-          revokedAt: null,
-        },
-        data: {
-          revokedAt: new Date(),
-          revokeReason,
-          replacedByJti,
-        },
-      });
-    } catch (error) {
-      return wrapAuthStoreError('revoke_refresh_session', error);
-    }
-  }
-
-  async revokeAllUserSessions(userId: string, revokeReason: string) {
-    try {
-      return await db.refreshSession.updateMany({
-        where: {
-          userId,
-          revokedAt: null,
-        },
-        data: {
-          revokedAt: new Date(),
-          revokeReason,
-        },
-      });
-    } catch (error) {
-      return wrapAuthStoreError('revoke_all_user_sessions', error);
-    }
-  }
+  createRefreshSession =
+    this.refreshSessions.createRefreshSession.bind(this.refreshSessions);
+  findRefreshSessionByJti =
+    this.refreshSessions.findRefreshSessionByJti.bind(this.refreshSessions);
+  revokeRefreshSession =
+    this.refreshSessions.revokeRefreshSession.bind(this.refreshSessions);
+  revokeAllUserSessions =
+    this.refreshSessions.revokeAllUserSessions.bind(this.refreshSessions);
 }
 
 export const authRepository = new AuthRepository();
-export type AuthUserRecord = User;
-export type AuthRefreshSessionRecord = RefreshSession & { user: User };
+
+export type {
+  AuthRefreshSessionRecord,
+  AuthUserRecord,
+  CreateRefreshSessionInput,
+  CreateUserRecordInput,
+} from './auth/auth.types.js';

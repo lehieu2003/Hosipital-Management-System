@@ -1,12 +1,21 @@
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BedMovementType, InpatientAdmissionStatus, UserRole } from '@prisma/client';
+import {
+  BedMovementType,
+  BillingPaymentStatus,
+  BillingSettlementStatus,
+  BillingTransitionType,
+  InpatientAdmissionStatus,
+  UserRole,
+} from '@prisma/client';
 
 const {
   admissionStore,
   bedOccupancyStore,
   bedStore,
+  billingInvoiceStore,
+  billingTransitionStore,
   dbMock,
   movementStore,
   patientStore,
@@ -16,6 +25,8 @@ const {
   const admissionStore = new Map<string, any>();
   const bedOccupancyStore = new Map<string, any>();
   const bedStore = new Map<string, any>();
+  const billingInvoiceStore = new Map<string, any>();
+  const billingTransitionStore = new Map<string, any>();
   const movementStore = new Map<string, any>();
   const patientStore = new Map<string, any>();
   const refreshSessionStore = new Map<string, any>();
@@ -95,6 +106,57 @@ const {
     toBed: movement.toBedId ? serializeBed(findBedById(movement.toBedId)) : null,
     movedByUser: serializeOperator(findUserById(movement.movedByUserId)),
   });
+
+  const serializeBillingTransition = (transition: any) => ({
+    id: transition.id,
+    invoiceId: transition.invoiceId,
+    transitionType: transition.transitionType,
+    fromPaymentStatus: transition.fromPaymentStatus ?? null,
+    toPaymentStatus: transition.toPaymentStatus,
+    fromSettlementStatus: transition.fromSettlementStatus ?? null,
+    toSettlementStatus: transition.toSettlementStatus,
+    balanceMinor: transition.balanceMinor,
+    context: transition.context ?? null,
+    actorUserId: transition.actorUserId ?? null,
+    createdAt: transition.createdAt,
+    actorUser: transition.actorUserId ? serializeOperator(findUserById(transition.actorUserId)) : null,
+  });
+
+  const serializeBillingInvoice = (invoice: any) => {
+    const patient = findPatientById(invoice.patientId);
+    const transitions = Array.from(billingTransitionStore.values())
+      .filter((entry) => entry.invoiceId === invoice.id)
+      .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime() || left.id.localeCompare(right.id))
+      .map(serializeBillingTransition);
+
+    return {
+      id: invoice.id,
+      admissionId: invoice.admissionId,
+      patientId: invoice.patientId,
+      paymentStatus: invoice.paymentStatus,
+      settlementStatus: invoice.settlementStatus,
+      currency: invoice.currency,
+      totalChargesMinor: invoice.totalChargesMinor,
+      totalPaymentsMinor: invoice.totalPaymentsMinor,
+      balanceMinor: invoice.balanceMinor,
+      dischargedAt: invoice.dischargedAt ?? null,
+      settledAt: invoice.settledAt ?? null,
+      version: invoice.version,
+      createdByUserId: invoice.createdByUserId ?? null,
+      createdAt: invoice.createdAt,
+      updatedAt: invoice.updatedAt,
+      patient: {
+        id: patient.id,
+        registrationNumber: patient.registrationNumber,
+        fullName: patient.fullName,
+        primaryPhone: patient.primaryPhone,
+      },
+      createdByUser: invoice.createdByUserId ? serializeOperator(findUserById(invoice.createdByUserId)) : null,
+      lines: [],
+      payments: [],
+      transitions,
+    };
+  };
 
   const serializeOccupancy = (occupancy: any) => {
     const admission = admissionStore.get(occupancy.admissionId);
@@ -361,12 +423,93 @@ const {
           .map(serializeMovement);
       },
     },
+    billingInvoice: {
+      findUnique: async ({ where }: { where: { id?: string; admissionId?: string } }) => {
+        if (where.id) {
+          const invoice = billingInvoiceStore.get(where.id);
+          return invoice ? serializeBillingInvoice(invoice) : null;
+        }
+
+        const invoice = Array.from(billingInvoiceStore.values()).find((entry) => entry.admissionId === where.admissionId);
+        return invoice ? serializeBillingInvoice(invoice) : null;
+      },
+      create: async ({ data }: { data: any }) => {
+        const id = `invoice_${billingInvoiceStore.size + 1}`;
+        const now = new Date('2026-05-15T12:30:00.000Z');
+        const record = {
+          id,
+          admissionId: data.admissionId,
+          patientId: data.patientId,
+          paymentStatus: data.paymentStatus ?? BillingPaymentStatus.UNPAID,
+          settlementStatus: data.settlementStatus ?? BillingSettlementStatus.OPEN,
+          currency: data.currency ?? 'USD',
+          totalChargesMinor: data.totalChargesMinor ?? 0,
+          totalPaymentsMinor: data.totalPaymentsMinor ?? 0,
+          balanceMinor: data.balanceMinor ?? 0,
+          dischargedAt: data.dischargedAt ?? null,
+          settledAt: data.settledAt ?? null,
+          version: data.version ?? 1,
+          createdByUserId: data.createdByUserId ?? null,
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        billingInvoiceStore.set(id, record);
+        return { id };
+      },
+      update: async ({ where, data }: { where: { id: string }; data: any }) => {
+        const invoice = billingInvoiceStore.get(where.id);
+        if (!invoice) {
+          throw new Error(`Invoice ${where.id} not found`);
+        }
+
+        const updated = {
+          ...invoice,
+          ...(data.dischargedAt !== undefined ? { dischargedAt: data.dischargedAt } : {}),
+          ...(data.settlementStatus !== undefined ? { settlementStatus: data.settlementStatus } : {}),
+          ...(data.settledAt !== undefined ? { settledAt: data.settledAt } : {}),
+          ...(data.totalChargesMinor !== undefined ? { totalChargesMinor: data.totalChargesMinor } : {}),
+          ...(data.totalPaymentsMinor !== undefined ? { totalPaymentsMinor: data.totalPaymentsMinor } : {}),
+          ...(data.balanceMinor !== undefined ? { balanceMinor: data.balanceMinor } : {}),
+          ...(data.paymentStatus !== undefined ? { paymentStatus: data.paymentStatus } : {}),
+          version: invoice.version + (data.version?.increment ?? 0),
+          updatedAt: new Date('2026-05-15T12:45:00.000Z'),
+        };
+
+        billingInvoiceStore.set(where.id, updated);
+        return { id: where.id };
+      },
+    },
+    billingTransitionHistory: {
+      create: async ({ data }: { data: any }) => {
+        const id = `billing_transition_${billingTransitionStore.size + 1}`;
+        const createdAt = new Date(`2026-05-15T12:4${billingTransitionStore.size}:00.000Z`);
+        const record = {
+          id,
+          invoiceId: data.invoiceId,
+          transitionType: data.transitionType,
+          fromPaymentStatus: data.fromPaymentStatus ?? null,
+          toPaymentStatus: data.toPaymentStatus,
+          fromSettlementStatus: data.fromSettlementStatus ?? null,
+          toSettlementStatus: data.toSettlementStatus,
+          balanceMinor: data.balanceMinor,
+          context: data.context ?? null,
+          actorUserId: data.actorUserId ?? null,
+          createdAt,
+        };
+
+        billingTransitionStore.set(id, record);
+        return serializeBillingTransition(record);
+      },
+    },
   };
 
   return {
     admissionStore,
     bedOccupancyStore,
     bedStore,
+    billingInvoiceStore,
+    billingTransitionStore,
     dbMock,
     movementStore,
     patientStore,
@@ -439,6 +582,8 @@ describe('ipd lifecycle routes', () => {
     admissionStore.clear();
     bedOccupancyStore.clear();
     bedStore.clear();
+    billingInvoiceStore.clear();
+    billingTransitionStore.clear();
     movementStore.clear();
     patientStore.clear();
     refreshSessionStore.clear();
@@ -630,6 +775,17 @@ describe('ipd lifecycle routes', () => {
         fromBedId: bedTwo.id,
         toBedId: null,
         note: 'Bed released after discharge',
+      }),
+    );
+
+    const dischargeSyncedInvoice = Array.from(billingInvoiceStore.values()).find(
+      (invoice) => invoice.admissionId === admissionOneId,
+    );
+    expect(dischargeSyncedInvoice).toEqual(
+      expect.objectContaining({
+        dischargedAt: expect.any(Date),
+        settlementStatus: BillingSettlementStatus.SETTLED,
+        balanceMinor: 0,
       }),
     );
 

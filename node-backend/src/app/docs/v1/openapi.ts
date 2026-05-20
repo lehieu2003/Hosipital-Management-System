@@ -37,6 +37,10 @@ export const openApiV1Document = {
       description: 'OPD appointment scheduling and version-guarded update operations',
     },
     {
+      name: 'Billing',
+      description: 'Admission-backed invoice lifecycle reads, idempotent charge appends, and payment settlement updates',
+    },
+    {
       name: 'Doctor Queue',
       description: 'Doctor-owned queue reads and lifecycle updates',
     },
@@ -1001,6 +1005,287 @@ export const openApiV1Document = {
           },
         },
       },
+      BillingActor: {
+        type: 'object',
+        required: ['id', 'username', 'role', 'isActive'],
+        properties: {
+          id: { type: 'string', example: 'user_reception_1' },
+          username: { type: 'string', example: 'reception' },
+          role: { type: 'string', enum: ['ADMIN', 'RECEPTIONIST', 'DOCTOR'] },
+          isActive: { type: 'boolean', example: true },
+        },
+      },
+      BillingPatient: {
+        type: 'object',
+        required: ['id', 'registrationNumber', 'fullName', 'primaryPhone'],
+        properties: {
+          id: { type: 'string', example: 'patient_1' },
+          registrationNumber: { type: 'string', example: 'REG-1' },
+          fullName: { type: 'string', example: 'Jane Doe' },
+          primaryPhone: { type: 'string', example: '+1555000111' },
+        },
+      },
+      BillingInvoiceLine: {
+        type: 'object',
+        required: [
+          'id',
+          'invoiceId',
+          'lineType',
+          'chargeCode',
+          'description',
+          'quantity',
+          'unitAmountMinor',
+          'lineAmountMinor',
+          'metadata',
+          'createdByUserId',
+          'createdAt',
+          'createdByUser',
+        ],
+        properties: {
+          id: { type: 'string', example: 'bill_line_1' },
+          invoiceId: { type: 'string', example: 'bill_invoice_1' },
+          lineType: { type: 'string', enum: ['CHARGE'] },
+          chargeCode: { type: 'string', nullable: true, example: 'ROOM_DAILY' },
+          description: { type: 'string', example: 'Daily room charge' },
+          quantity: { type: 'integer', minimum: 1, example: 2 },
+          unitAmountMinor: { type: 'integer', minimum: 1, example: 2500 },
+          lineAmountMinor: { type: 'integer', example: 5000 },
+          metadata: {
+            oneOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
+          },
+          createdByUserId: { type: 'string', nullable: true, example: 'user_reception_1' },
+          createdAt: { type: 'string', format: 'date-time' },
+          createdByUser: {
+            allOf: [{ $ref: '#/components/schemas/BillingActor' }],
+            nullable: true,
+          },
+        },
+      },
+      BillingPayment: {
+        type: 'object',
+        required: [
+          'id',
+          'invoiceId',
+          'amountMinor',
+          'paymentMethod',
+          'paymentReference',
+          'note',
+          'recordedByUserId',
+          'receivedAt',
+          'createdAt',
+          'recordedByUser',
+        ],
+        properties: {
+          id: { type: 'string', example: 'bill_payment_1' },
+          invoiceId: { type: 'string', example: 'bill_invoice_1' },
+          amountMinor: { type: 'integer', minimum: 1, example: 3000 },
+          paymentMethod: { type: 'string', example: 'cash' },
+          paymentReference: { type: 'string', nullable: true, example: 'REC-1001' },
+          note: { type: 'string', nullable: true, example: 'Front desk partial payment' },
+          recordedByUserId: { type: 'string', nullable: true, example: 'user_reception_1' },
+          receivedAt: { type: 'string', format: 'date-time' },
+          createdAt: { type: 'string', format: 'date-time' },
+          recordedByUser: {
+            allOf: [{ $ref: '#/components/schemas/BillingActor' }],
+            nullable: true,
+          },
+        },
+      },
+      BillingTransition: {
+        type: 'object',
+        required: [
+          'id',
+          'invoiceId',
+          'transitionType',
+          'fromPaymentStatus',
+          'toPaymentStatus',
+          'fromSettlementStatus',
+          'toSettlementStatus',
+          'balanceMinor',
+          'context',
+          'actorUserId',
+          'createdAt',
+          'actorUser',
+        ],
+        properties: {
+          id: { type: 'string', example: 'bill_transition_1' },
+          invoiceId: { type: 'string', example: 'bill_invoice_1' },
+          transitionType: {
+            type: 'string',
+            enum: [
+              'INVOICE_OPENED',
+              'CHARGE_APPENDED',
+              'PAYMENT_RECORDED',
+              'DISCHARGE_SYNC',
+              'SETTLEMENT_COMPLETED',
+            ],
+          },
+          fromPaymentStatus: {
+            type: 'string',
+            nullable: true,
+            enum: ['UNPAID', 'PARTIALLY_PAID', 'PAID_IN_FULL'],
+          },
+          toPaymentStatus: {
+            type: 'string',
+            enum: ['UNPAID', 'PARTIALLY_PAID', 'PAID_IN_FULL'],
+          },
+          fromSettlementStatus: {
+            type: 'string',
+            nullable: true,
+            enum: ['OPEN', 'PENDING_SETTLEMENT', 'SETTLED'],
+          },
+          toSettlementStatus: {
+            type: 'string',
+            enum: ['OPEN', 'PENDING_SETTLEMENT', 'SETTLED'],
+          },
+          balanceMinor: { type: 'integer', example: 2000 },
+          context: {
+            oneOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
+          },
+          actorUserId: { type: 'string', nullable: true, example: 'user_reception_1' },
+          createdAt: { type: 'string', format: 'date-time' },
+          actorUser: {
+            allOf: [{ $ref: '#/components/schemas/BillingActor' }],
+            nullable: true,
+          },
+        },
+      },
+      BillingInvoice: {
+        type: 'object',
+        required: [
+          'id',
+          'admissionId',
+          'patientId',
+          'paymentStatus',
+          'settlementStatus',
+          'currency',
+          'totalChargesMinor',
+          'totalPaymentsMinor',
+          'balanceMinor',
+          'dischargedAt',
+          'settledAt',
+          'version',
+          'createdByUserId',
+          'createdAt',
+          'updatedAt',
+          'patient',
+          'createdByUser',
+          'lines',
+          'payments',
+          'transitions',
+        ],
+        properties: {
+          id: { type: 'string', example: 'bill_invoice_1' },
+          admissionId: { type: 'string', example: 'admission_1' },
+          patientId: { type: 'string', example: 'patient_1' },
+          paymentStatus: {
+            type: 'string',
+            enum: ['UNPAID', 'PARTIALLY_PAID', 'PAID_IN_FULL'],
+          },
+          settlementStatus: {
+            type: 'string',
+            enum: ['OPEN', 'PENDING_SETTLEMENT', 'SETTLED'],
+          },
+          currency: { type: 'string', example: 'USD' },
+          totalChargesMinor: { type: 'integer', minimum: 0, example: 5000 },
+          totalPaymentsMinor: { type: 'integer', minimum: 0, example: 3000 },
+          balanceMinor: { type: 'integer', example: 2000 },
+          dischargedAt: { type: 'string', format: 'date-time', nullable: true },
+          settledAt: { type: 'string', format: 'date-time', nullable: true },
+          version: { type: 'integer', minimum: 1, example: 4 },
+          createdByUserId: { type: 'string', nullable: true, example: 'user_reception_1' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          patient: { $ref: '#/components/schemas/BillingPatient' },
+          createdByUser: {
+            allOf: [{ $ref: '#/components/schemas/BillingActor' }],
+            nullable: true,
+          },
+          lines: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/BillingInvoiceLine' },
+          },
+          payments: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/BillingPayment' },
+          },
+          transitions: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/BillingTransition' },
+          },
+        },
+      },
+      BillingInvoiceEnvelope: {
+        type: 'object',
+        required: ['success', 'data'],
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { $ref: '#/components/schemas/BillingInvoice' },
+        },
+      },
+      AppendBillingChargeRequest: {
+        type: 'object',
+        required: ['description', 'quantity', 'unitAmountMinor', 'idempotencyKey'],
+        additionalProperties: false,
+        properties: {
+          chargeCode: { type: 'string', nullable: true, example: 'ROOM_DAILY' },
+          description: { type: 'string', example: 'Daily room charge' },
+          quantity: { type: 'integer', minimum: 1, example: 2 },
+          unitAmountMinor: { type: 'integer', minimum: 1, example: 2500 },
+          idempotencyKey: { type: 'string', example: 'charge-room-2026-05-15' },
+          metadata: {
+            oneOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
+          },
+          expectedInvoiceVersion: { type: 'integer', minimum: 1, example: 1 },
+        },
+      },
+      AppendBillingChargeResult: {
+        type: 'object',
+        required: ['invoice', 'line', 'transition'],
+        properties: {
+          invoice: { $ref: '#/components/schemas/BillingInvoice' },
+          line: { $ref: '#/components/schemas/BillingInvoiceLine' },
+          transition: { $ref: '#/components/schemas/BillingTransition' },
+        },
+      },
+      AppendBillingChargeEnvelope: {
+        type: 'object',
+        required: ['success', 'data'],
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { $ref: '#/components/schemas/AppendBillingChargeResult' },
+        },
+      },
+      RecordBillingPaymentRequest: {
+        type: 'object',
+        required: ['amountMinor', 'paymentMethod'],
+        additionalProperties: false,
+        properties: {
+          amountMinor: { type: 'integer', minimum: 1, example: 3000 },
+          paymentMethod: { type: 'string', example: 'cash' },
+          paymentReference: { type: 'string', nullable: true, example: 'REC-1001' },
+          note: { type: 'string', nullable: true, example: 'Front desk partial payment' },
+          receivedAt: { type: 'string', format: 'date-time', example: '2026-05-16T10:00:00.000Z' },
+          expectedInvoiceVersion: { type: 'integer', minimum: 1, example: 2 },
+        },
+      },
+      RecordBillingPaymentResult: {
+        type: 'object',
+        required: ['invoice', 'payment', 'transition'],
+        properties: {
+          invoice: { $ref: '#/components/schemas/BillingInvoice' },
+          payment: { $ref: '#/components/schemas/BillingPayment' },
+          transition: { $ref: '#/components/schemas/BillingTransition' },
+        },
+      },
+      RecordBillingPaymentEnvelope: {
+        type: 'object',
+        required: ['success', 'data'],
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { $ref: '#/components/schemas/RecordBillingPaymentResult' },
+        },
+      },
     },
   },
   paths: {
@@ -1925,6 +2210,168 @@ export const openApiV1Document = {
                 },
               },
             },
+          },
+        },
+      },
+    },
+    '/billing/admissions/{admissionId}/invoice': {
+      get: {
+        tags: ['Billing'],
+        summary: 'Read or lazily open the single admission-backed invoice',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'admissionId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Admission identifier.',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Invoice read succeeded. If missing, the backend opens exactly one invoice for the admission before returning it.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/BillingInvoiceEnvelope' },
+              },
+            },
+          },
+          '400': {
+            description: 'Path validation failed.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '401': {
+            description: 'Bearer token is missing, invalid, or expired.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '403': {
+            description: 'Authenticated principal is not permitted to operate billing routes.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '404': {
+            description: 'Admission was not found.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '503': {
+            description: 'Billing persistence is temporarily unavailable.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+        },
+      },
+    },
+    '/billing/admissions/{admissionId}/charges': {
+      post: {
+        tags: ['Billing'],
+        summary: 'Append an idempotent charge line to the admission invoice',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'admissionId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Admission identifier.',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/AppendBillingChargeRequest' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Charge append succeeded and returns the updated invoice, new line, and append-only transition record.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/AppendBillingChargeEnvelope' },
+              },
+            },
+          },
+          '400': {
+            description: 'Request body or path validation failed.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '401': {
+            description: 'Bearer token is missing, invalid, or expired.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '403': {
+            description: 'Authenticated principal is not permitted to operate billing routes.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '404': {
+            description: 'Admission was not found.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '409': {
+            description: 'Invoice version guard failed, duplicate charge replay was denied, or the invoice settlement state rejects further mutations.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '503': {
+            description: 'Billing persistence is temporarily unavailable.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+        },
+      },
+    },
+    '/billing/admissions/{admissionId}/payments': {
+      post: {
+        tags: ['Billing'],
+        summary: 'Record a partial or final payment against the admission invoice',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'admissionId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Admission identifier.',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/RecordBillingPaymentRequest' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Payment record succeeded and returns the updated invoice, new payment, and append-only transition record.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RecordBillingPaymentEnvelope' },
+              },
+            },
+          },
+          '400': {
+            description: 'Request body or path validation failed.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '401': {
+            description: 'Bearer token is missing, invalid, or expired.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '403': {
+            description: 'Authenticated principal is not permitted to operate billing routes.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '404': {
+            description: 'Admission was not found.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '409': {
+            description: 'Invoice version guard failed or the invoice settlement state rejects the payment mutation.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
+          },
+          '503': {
+            description: 'Billing persistence is temporarily unavailable.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } },
           },
         },
       },

@@ -125,9 +125,9 @@ class BillingService {
   async getInvoiceByAdmissionId(admissionId: string, actor: AuthPrincipal) {
     ensureBillingOperatorActor(actor);
 
-    const invoice = await billingRepository.findInvoiceByAdmissionId(admissionId);
+    const invoice = await billingRepository.ensureInvoiceByAdmissionId(admissionId, actor.userId);
     if (!invoice) {
-      throw new AppError('Billing invoice not found', HTTP_STATUS.notFound, ERROR_CODES.billingInvoiceNotFound);
+      throw new AppError('Admission not found', HTTP_STATUS.notFound, ERROR_CODES.admissionNotFound);
     }
 
     logger.info(

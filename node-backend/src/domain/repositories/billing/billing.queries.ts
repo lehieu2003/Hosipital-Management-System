@@ -1,5 +1,6 @@
 import { db } from '../../../infrastructure/database/client.js';
 import { wrapBillingStoreError } from './billing.errors.js';
+import { ensureInvoiceForAdmissionTx } from './billing.invoice-access.js';
 import { invoiceSelect } from './billing.select.js';
 import type { BillingInvoiceRecord } from './billing.types.js';
 
@@ -15,6 +16,22 @@ export class BillingQueries {
     } catch (error) {
       return wrapBillingStoreError('find_invoice_by_admission_id', error, {
         admissionId,
+      });
+    }
+  }
+
+  async ensureInvoiceByAdmissionId(admissionId: string, actorUserId: string) {
+    try {
+      return await db.$transaction((tx) =>
+        ensureInvoiceForAdmissionTx(tx, {
+          admissionId,
+          actorUserId,
+        }),
+      );
+    } catch (error) {
+      return wrapBillingStoreError('ensure_invoice_by_admission_id', error, {
+        admissionId,
+        actorUserId,
       });
     }
   }

@@ -52,6 +52,9 @@ describe('Swagger docs routes', () => {
         '/doctor/queue/{appointmentId}': expect.any(Object),
         '/appointments': expect.any(Object),
         '/appointments/{appointmentId}': expect.any(Object),
+        '/billing/admissions/{admissionId}/invoice': expect.any(Object),
+        '/billing/admissions/{admissionId}/charges': expect.any(Object),
+        '/billing/admissions/{admissionId}/payments': expect.any(Object),
       }),
     );
 
@@ -193,6 +196,68 @@ describe('Swagger docs routes', () => {
           '422': expect.any(Object),
           '503': expect.any(Object),
         }),
+      }),
+    );
+
+    expect(response.body.paths['/billing/admissions/{admissionId}/invoice'].get).toEqual(
+      expect.objectContaining({
+        security: [{ bearerAuth: [] }],
+        responses: expect.objectContaining({
+          '200': expect.any(Object),
+          '400': expect.any(Object),
+          '401': expect.any(Object),
+          '403': expect.any(Object),
+          '404': expect.any(Object),
+          '503': expect.any(Object),
+        }),
+      }),
+    );
+
+    expect(response.body.paths['/billing/admissions/{admissionId}/charges'].post).toEqual(
+      expect.objectContaining({
+        security: [{ bearerAuth: [] }],
+        responses: expect.objectContaining({
+          '200': expect.any(Object),
+          '400': expect.any(Object),
+          '401': expect.any(Object),
+          '403': expect.any(Object),
+          '404': expect.any(Object),
+          '409': expect.any(Object),
+          '503': expect.any(Object),
+        }),
+      }),
+    );
+
+    expect(response.body.paths['/billing/admissions/{admissionId}/payments'].post).toEqual(
+      expect.objectContaining({
+        security: [{ bearerAuth: [] }],
+        responses: expect.objectContaining({
+          '200': expect.any(Object),
+          '400': expect.any(Object),
+          '401': expect.any(Object),
+          '403': expect.any(Object),
+          '404': expect.any(Object),
+          '409': expect.any(Object),
+          '503': expect.any(Object),
+        }),
+      }),
+    );
+
+    expect(response.body.components.schemas.BillingInvoice).toEqual(
+      expect.objectContaining({
+        required: expect.arrayContaining(['paymentStatus', 'settlementStatus', 'lines', 'payments', 'transitions']),
+      }),
+    );
+
+    expect(response.body.components.schemas.AppendBillingChargeRequest).toEqual(
+      expect.objectContaining({
+        required: ['description', 'quantity', 'unitAmountMinor', 'idempotencyKey'],
+      }),
+    );
+
+    expect(response.body.components.schemas.RecordBillingPaymentRequest).toEqual(
+      expect.objectContaining({
+        required: ['amountMinor', 'paymentMethod'],
       }),
     );
   });

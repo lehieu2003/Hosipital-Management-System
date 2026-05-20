@@ -4,6 +4,7 @@ import { appConfig } from '../../../shared/configs/app.config.js';
 import { adminConfigRoutes } from './admin-config.routes.js';
 import { appointmentsRoutes } from './appointments.routes.js';
 import { authRoutes } from './auth.routes.js';
+import { billingRoutes } from './billing.routes.js';
 import { docsRoutes } from './docs.routes.js';
 import { doctorQueueRoutes } from './doctor-queue.routes.js';
 import { doctorsRoutes } from './doctors.routes.js';
@@ -21,6 +22,7 @@ v1Routes.use(adminConfigRoutes);
 v1Routes.use(patientsRoutes);
 v1Routes.use(doctorsRoutes);
 v1Routes.use(appointmentsRoutes);
+v1Routes.use(billingRoutes);
 v1Routes.use(doctorQueueRoutes);
 v1Routes.use(ipdRoutes);
 

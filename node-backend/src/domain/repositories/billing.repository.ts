@@ -10,6 +10,8 @@ class BillingRepository {
 
   findInvoiceByAdmissionId =
     this.queries.findInvoiceByAdmissionId.bind(this.queries);
+  ensureInvoiceByAdmissionId =
+    this.queries.ensureInvoiceByAdmissionId.bind(this.queries);
   appendCharge = this.workflows.appendCharge.bind(this.workflows);
   recordPayment = this.workflows.recordPayment.bind(this.workflows);
   syncSettlementForDischarge =

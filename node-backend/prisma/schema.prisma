@@ -39,6 +39,30 @@ enum BedMovementType {
   DISCHARGED
 }
 
+enum BillingPaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID_IN_FULL
+}
+
+enum BillingSettlementStatus {
+  OPEN
+  PENDING_SETTLEMENT
+  SETTLED
+}
+
+enum BillingInvoiceLineType {
+  CHARGE
+}
+
+enum BillingTransitionType {
+  INVOICE_OPENED
+  CHARGE_APPENDED
+  PAYMENT_RECORDED
+  DISCHARGE_SYNC
+  SETTLEMENT_COMPLETED
+}
+
 model User {
   id                           String                 @id @default(cuid())
   username                     String                 @unique
@@ -54,8 +78,13 @@ model User {
   admittedInpatientAdmissions  InpatientAdmission[]   @relation("AdmittedByUser")
   dischargedInpatientAdmissions InpatientAdmission[]  @relation("DischargedByUser")
   attendingInpatientAdmissions InpatientAdmission[]   @relation("AttendingDoctorAdmissions")
-  managedBedOccupancies        BedOccupancy[]         @relation("BedOccupancyManagedByUser")
-  inpatientBedMovements        InpatientBedMovement[] @relation("BedMovementPerformedByUser")
+  managedBedOccupancies         BedOccupancy[]              @relation("BedOccupancyManagedByUser")
+  inpatientBedMovements         InpatientBedMovement[]      @relation("BedMovementPerformedByUser")
+  createdBillingInvoices        BillingInvoice[]            @relation("BillingInvoiceCreatedByUser")
+  createdBillingInvoiceLines    BillingInvoiceLine[]        @relation("BillingInvoiceLineCreatedByUser")
+  recordedBillingPayments       BillingPayment[]            @relation("BillingPaymentRecordedByUser")
+  recordedBillingTransitions    BillingTransitionHistory[]  @relation("BillingTransitionActorUser")
+  createdBillingChargeReplays   BillingChargeIdempotency[]  @relation("BillingChargeReplayCreatedByUser")
 
   @@map("users")
   @@index([username], map: "idx_users_username")
@@ -107,6 +136,7 @@ model Patient {
   updatedAt          DateTime             @updatedAt @map("updated_at")
   appointments       Appointment[]
   inpatientAdmissions InpatientAdmission[]
+  billingInvoices    BillingInvoice[]
 
   @@map("patients")
   @@index([fullName], map: "idx_patients_full_name")
@@ -152,6 +182,7 @@ model InpatientAdmission {
   updatedAt           DateTime                 @updatedAt @map("updated_at")
   currentBedOccupancy BedOccupancy?            @relation("AdmissionCurrentBedOccupancy")
   bedMovements        InpatientBedMovement[]
+  billingInvoice      BillingInvoice?
 
   @@map("inpatient_admissions")
   @@index([patientId], map: "idx_inpatient_admissions_patient_id")
@@ -218,4 +249,112 @@ model InpatientBedMovement {
   @@index([fromBedId], map: "idx_inpatient_bed_movements_from_bed_id")
   @@index([toBedId], map: "idx_inpatient_bed_movements_to_bed_id")
   @@index([movedByUserId], map: "idx_inpatient_bed_movements_moved_by_user_id")
+}
+
+model BillingInvoice {
+  id               String                  @id @default(cuid())
+  admissionId      String                  @unique @map("admission_id")
+  admission        InpatientAdmission      @relation(fields: [admissionId], references: [id], onDelete: Cascade)
+  patientId        String                  @map("patient_id")
+  patient          Patient                 @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  paymentStatus    BillingPaymentStatus    @default(UNPAID) @map("payment_status")
+  settlementStatus BillingSettlementStatus @default(OPEN) @map("settlement_status")
+  currency         String                  @default("USD")
+  totalChargesMinor Int                    @default(0) @map("total_charges_minor")
+  totalPaymentsMinor Int                   @default(0) @map("total_payments_minor")
+  balanceMinor     Int                     @default(0) @map("balance_minor")
+  dischargedAt     DateTime?               @map("discharged_at")
+  settledAt        DateTime?               @map("settled_at")
+  version          Int                     @default(1)
+  createdByUserId  String?                 @map("created_by_user_id")
+  createdByUser    User?                   @relation("BillingInvoiceCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt        DateTime                @default(now()) @map("created_at")
+  updatedAt        DateTime                @updatedAt @map("updated_at")
+  lines            BillingInvoiceLine[]
+  payments         BillingPayment[]
+  transitions      BillingTransitionHistory[]
+  chargeReplays    BillingChargeIdempotency[]
+
+  @@map("billing_invoices")
+  @@index([patientId], map: "idx_billing_invoices_patient_id")
+  @@index([paymentStatus, settlementStatus], map: "idx_billing_invoices_payment_settlement_status")
+  @@index([createdByUserId], map: "idx_billing_invoices_created_by_user_id")
+}
+
+model BillingInvoiceLine {
+  id              String                 @id @default(cuid())
+  invoiceId       String                 @map("invoice_id")
+  invoice         BillingInvoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  lineType        BillingInvoiceLineType @default(CHARGE) @map("line_type")
+  chargeCode      String?                @map("charge_code")
+  description     String
+  quantity        Int                    @default(1)
+  unitAmountMinor Int                    @map("unit_amount_minor")
+  lineAmountMinor Int                    @map("line_amount_minor")
+  metadata        Json?
+  createdByUserId String?                @map("created_by_user_id")
+  createdByUser   User?                  @relation("BillingInvoiceLineCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime               @default(now()) @map("created_at")
+  chargeReplay    BillingChargeIdempotency?
+
+  @@map("billing_invoice_lines")
+  @@index([invoiceId, createdAt], map: "idx_billing_invoice_lines_invoice_created_at")
+  @@index([chargeCode], map: "idx_billing_invoice_lines_charge_code")
+  @@index([createdByUserId], map: "idx_billing_invoice_lines_created_by_user_id")
+}
+
+model BillingPayment {
+  id               String         @id @default(cuid())
+  invoiceId        String         @map("invoice_id")
+  invoice          BillingInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amountMinor      Int            @map("amount_minor")
+  paymentMethod    String         @map("payment_method")
+  paymentReference String?        @map("payment_reference")
+  note             String?
+  recordedByUserId String?        @map("recorded_by_user_id")
+  recordedByUser   User?          @relation("BillingPaymentRecordedByUser", fields: [recordedByUserId], references: [id], onDelete: SetNull)
+  receivedAt       DateTime       @default(now()) @map("received_at")
+  createdAt        DateTime       @default(now()) @map("created_at")
+
+  @@map("billing_payments")
+  @@index([invoiceId, receivedAt], map: "idx_billing_payments_invoice_received_at")
+  @@index([recordedByUserId], map: "idx_billing_payments_recorded_by_user_id")
+}
+
+model BillingTransitionHistory {
+  id                   String                  @id @default(cuid())
+  invoiceId            String                  @map("invoice_id")
+  invoice              BillingInvoice          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  transitionType       BillingTransitionType   @map("transition_type")
+  fromPaymentStatus    BillingPaymentStatus?   @map("from_payment_status")
+  toPaymentStatus      BillingPaymentStatus    @map("to_payment_status")
+  fromSettlementStatus BillingSettlementStatus? @map("from_settlement_status")
+  toSettlementStatus   BillingSettlementStatus @map("to_settlement_status")
+  balanceMinor         Int                     @map("balance_minor")
+  context              Json?
+  actorUserId          String?                 @map("actor_user_id")
+  actorUser            User?                   @relation("BillingTransitionActorUser", fields: [actorUserId], references: [id], onDelete: SetNull)
+  createdAt            DateTime                @default(now()) @map("created_at")
+
+  @@map("billing_transition_history")
+  @@index([invoiceId, createdAt], map: "idx_billing_transition_history_invoice_created_at")
+  @@index([transitionType], map: "idx_billing_transition_history_transition_type")
+  @@index([actorUserId], map: "idx_billing_transition_history_actor_user_id")
+}
+
+model BillingChargeIdempotency {
+  id              String             @id @default(cuid())
+  invoiceId       String             @map("invoice_id")
+  invoice         BillingInvoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  lineId          String             @unique @map("line_id")
+  line            BillingInvoiceLine @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  idempotencyKey  String             @map("idempotency_key")
+  requestHash     String             @map("request_hash")
+  createdByUserId String?            @map("created_by_user_id")
+  createdByUser   User?              @relation("BillingChargeReplayCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime           @default(now()) @map("created_at")
+
+  @@map("billing_charge_idempotency")
+  @@unique([invoiceId, idempotencyKey], map: "uq_billing_charge_idempotency_invoice_key")
+  @@index([createdByUserId], map: "idx_billing_charge_idempotency_created_by_user_id")
 }

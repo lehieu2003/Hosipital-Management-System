@@ -455,6 +455,12 @@ class IpdService {
               HTTP_STATUS.conflict,
               ERROR_CODES.bedOccupancyVersionConflict,
             );
+          case 'invalid_settlement_transition':
+            throw new AppError(
+              'Billing settlement state blocked discharge synchronization',
+              HTTP_STATUS.conflict,
+              ERROR_CODES.billingInvalidSettlementTransition,
+            );
         }
       }
 
@@ -470,6 +476,11 @@ class IpdService {
           previousAdmissionVersion: input.expectedAdmissionVersion,
           currentAdmissionVersion: result.admission.version,
           previousOccupancyVersion: input.expectedOccupancyVersion ?? null,
+          billingInvoiceId: result.billingInvoice.id,
+          billingInvoiceVersion: result.billingInvoice.version,
+          billingPaymentStatus: result.billingInvoice.paymentStatus,
+          billingSettlementStatus: result.billingInvoice.settlementStatus,
+          billingBalanceMinor: result.billingInvoice.balanceMinor,
         },
         'ipd_admission_discharged',
       );

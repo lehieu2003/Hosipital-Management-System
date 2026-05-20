@@ -1,6 +1,7 @@
 import { BedMovementType, InpatientAdmissionStatus } from '@prisma/client';
 
 import { db } from '../../../infrastructure/database/client.js';
+import { syncBillingSettlementForDischargeTx } from '../billing.repository.js';
 import { bedMovementSelect, bedSelect, admissionSelect } from './ipd.select.js';
 import {
   getUniqueConstraintTargets,
@@ -353,6 +354,22 @@ export class IpdBedWorkflows {
           rollback('stale_admission_version');
         }
 
+        const billingSettlement = await syncBillingSettlementForDischargeTx(tx, {
+          admissionId,
+          actorUserId,
+          dischargedAt,
+        });
+
+        if (!billingSettlement.ok) {
+          if (billingSettlement.reason === 'invalid_settlement_transition') {
+            rollback('invalid_settlement_transition');
+          }
+
+          throw new Error(
+            `Billing settlement sync failed after discharge update: ${billingSettlement.reason}`,
+          );
+        }
+
         const updatedAdmission = await tx.inpatientAdmission.findUnique({
           where: { id: admissionId },
           select: admissionSelect,
@@ -368,6 +385,7 @@ export class IpdBedWorkflows {
           ok: true,
           admission: updatedAdmission as InpatientAdmissionRecord,
           movement,
+          billingInvoice: billingSettlement.invoice,
         };
       });
     } catch (error) {

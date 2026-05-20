@@ -7,6 +7,8 @@ import {
   type User,
 } from '@prisma/client';
 
+import type { BillingInvoiceRecord } from '../billing/billing.types.js';
+
 export type CreateInpatientAdmissionRecordInput = {
   patientId: string;
   attendingDoctorUserId?: string;
@@ -179,6 +181,7 @@ export type DischargeAdmissionWriteResult =
       ok: true;
       admission: InpatientAdmissionRecord;
       movement: InpatientBedMovementRecord | null;
+      billingInvoice: BillingInvoiceRecord;
     }
   | {
       ok: false;
@@ -186,8 +189,11 @@ export type DischargeAdmissionWriteResult =
         | 'admission_not_found'
         | 'admission_not_active'
         | 'stale_admission_version'
-        | 'stale_occupancy_version';
+        | 'stale_occupancy_version'
+        | 'invalid_settlement_transition';
     };
+
+export type IpdBillingInvoiceRecord = BillingInvoiceRecord;
 
 export type IpdBedRecord = BedRecord;
 export type IpdBedOccupancyRecord = BedOccupancyRecord;

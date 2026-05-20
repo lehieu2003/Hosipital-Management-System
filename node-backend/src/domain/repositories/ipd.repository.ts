@@ -44,6 +44,7 @@ export type {
   IpdBedMovementRecord,
   IpdBedOccupancyRecord,
   IpdBedRecord,
+  IpdBillingInvoiceRecord,
   IpdCurrentBedOccupancyRecord,
   TransferAdmissionBedRecordInput,
   TransferBedWriteResult,

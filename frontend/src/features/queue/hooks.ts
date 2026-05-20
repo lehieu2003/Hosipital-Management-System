@@ -1,9 +1,6 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { useAuth } from '@/features/auth';
-import { ApiError, createApiClient } from '@/lib/api/client';
-
 import {
   listDoctorQueue,
   shouldRecoverDoctorQueue,
@@ -11,7 +8,9 @@ import {
   type DoctorQueueAppointment,
   type QueueLifecycleAppointment,
   type UpdateDoctorQueueAppointmentInput,
-} from './api';
+} from '@/api';
+import { useAuth } from '@/features/auth';
+import { ApiError, createApiClient } from '@/api';
 
 export const DOCTOR_QUEUE_QUERY_KEY = ['doctor-queue'] as const;
 export const DOCTOR_QUEUE_REFETCH_INTERVAL_MS = 15_000;

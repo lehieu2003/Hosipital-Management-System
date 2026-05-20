@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 
-import type { SessionManager, SessionSnapshot } from '@/lib/api/client';
+import type { SessionManager, SessionSnapshot } from '@/api';
 
 export type UserRole = 'admin' | 'doctor' | 'receptionist';
 
@@ -27,7 +27,9 @@ export type AuthContextValue = {
   sessionManager: SessionManager;
   login: (username: string, password: string) => Promise<UserSession>;
   logout: () => Promise<void>;
-  refresh: () => Promise<UserSession | null>;
+  refresh: (options?: {
+    commitSession?: boolean;
+  }) => Promise<UserSession | null>;
 };
 
 export type AuthSuccessEnvelope = {
@@ -103,7 +105,11 @@ export function persistSession(session: UserSession | null) {
 export function normalizeRole(role: string): UserRole {
   const normalized = role.trim().toLowerCase();
 
-  if (normalized === 'doctor' || normalized === 'receptionist' || normalized === 'admin') {
+  if (
+    normalized === 'doctor' ||
+    normalized === 'receptionist' ||
+    normalized === 'admin'
+  ) {
     return normalized;
   }
 
@@ -114,7 +120,9 @@ export function isUserRole(role: unknown): role is UserRole {
   return role === 'admin' || role === 'doctor' || role === 'receptionist';
 }
 
-export function toUserSession(payload: AuthSuccessEnvelope['data']): UserSession {
+export function toUserSession(
+  payload: AuthSuccessEnvelope['data'],
+): UserSession {
   return {
     accessToken: payload.accessToken,
     userId: payload.user.id,

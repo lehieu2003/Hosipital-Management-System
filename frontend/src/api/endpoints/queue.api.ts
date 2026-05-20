@@ -1,4 +1,5 @@
-import { ApiError, type ApiErrorCode, type createApiClient } from '@/lib/api/client';
+import { ApiError, type ApiErrorCode, type createApiClient } from '@/api/client';
+import { API_ENDPOINTS } from './api-endpoints';
 
 const REQUEST_TIMEOUT_MS = 8_000;
 
@@ -60,7 +61,7 @@ export class QueueMutationRecoveryError extends ApiError {
 export async function listDoctorQueue(client: ApiClient): Promise<DoctorQueueAppointment[]> {
   try {
     const response = await withTimeout((signal) =>
-      client.get<unknown>('/doctor/queue', {
+      client.get<unknown>(API_ENDPOINTS.queue.doctorQueue, {
         replayAfterRefresh: true,
         signal,
       }),
@@ -86,7 +87,7 @@ export async function updateDoctorQueueAppointment(
 
   try {
     const response = await withTimeout((signal) =>
-      client.patch<unknown>(`/doctor/queue/${input.appointmentId}`, {
+      client.patch<unknown>(API_ENDPOINTS.queue.doctorQueueAppointment(input.appointmentId), {
         version: input.version,
         status: input.status,
       }, {

@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { OperationalStateView } from '@/features/opd/components/OperationalStateView';
 
-import type { DoctorQueueAppointment } from './api';
+import type { DoctorQueueAppointment } from '@/api';
 import {
   resolveDoctorQueueActionState,
   resolveDoctorQueueBoundaryState,

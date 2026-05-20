@@ -1,4 +1,5 @@
-import { ApiError, type ApiErrorCode, type createApiClient } from '@/lib/api/client';
+import { ApiError, type ApiErrorCode, type createApiClient } from '@/api/client';
+import { API_ENDPOINTS } from './api-endpoints';
 
 type ApiClient = ReturnType<typeof createApiClient>;
 type EnvelopeRecord = Record<string, unknown>;
@@ -147,7 +148,7 @@ export async function admitPatient(
 ): Promise<IpdAdmission> {
   try {
     const response = await withTimeout((signal) =>
-      client.post<unknown>('/ipd/admissions', input, {
+      client.post<unknown>(API_ENDPOINTS.ipd.admissions, input, {
         replayAfterRefresh: true,
         signal,
       }),
@@ -165,7 +166,7 @@ export async function assignBed(
 ): Promise<IpdAdmissionActionResult> {
   try {
     const response = await withTimeout((signal) =>
-      client.post<unknown>(`/ipd/admissions/${encodeURIComponent(input.admissionId)}/bed-assignment`, {
+      client.post<unknown>(API_ENDPOINTS.ipd.admissionBedAssignment(input.admissionId), {
         bedId: input.bedId,
         expectedAdmissionVersion: input.expectedAdmissionVersion,
         note: input.note ?? null,
@@ -187,7 +188,7 @@ export async function transferBed(
 ): Promise<IpdAdmissionActionResult> {
   try {
     const response = await withTimeout((signal) =>
-      client.post<unknown>(`/ipd/admissions/${encodeURIComponent(input.admissionId)}/bed-transfer`, {
+      client.post<unknown>(API_ENDPOINTS.ipd.admissionBedTransfer(input.admissionId), {
         targetBedId: input.targetBedId,
         expectedAdmissionVersion: input.expectedAdmissionVersion,
         expectedOccupancyVersion: input.expectedOccupancyVersion,
@@ -210,7 +211,7 @@ export async function dischargeAdmission(
 ): Promise<IpdAdmissionActionResult> {
   try {
     const response = await withTimeout((signal) =>
-      client.post<unknown>(`/ipd/admissions/${encodeURIComponent(input.admissionId)}/discharge`, {
+      client.post<unknown>(API_ENDPOINTS.ipd.admissionDischarge(input.admissionId), {
         expectedAdmissionVersion: input.expectedAdmissionVersion,
         expectedOccupancyVersion: input.expectedOccupancyVersion,
         dischargeNotes: input.dischargeNotes ?? null,
@@ -230,7 +231,7 @@ export async function dischargeAdmission(
 export async function listCurrentOccupancy(client: ApiClient): Promise<IpdOccupancyEntry[]> {
   try {
     const response = await withTimeout((signal) =>
-      client.get<unknown>('/ipd/occupancy', {
+      client.get<unknown>(API_ENDPOINTS.ipd.occupancy, {
         replayAfterRefresh: true,
         signal,
       }),
@@ -253,7 +254,7 @@ export async function listAdmissionMovements(
 ): Promise<IpdBedMovement[]> {
   try {
     const response = await withTimeout((signal) =>
-      client.get<unknown>(`/ipd/admissions/${encodeURIComponent(admissionId)}/movements`, {
+      client.get<unknown>(API_ENDPOINTS.ipd.admissionMovements(admissionId), {
         replayAfterRefresh: true,
         signal,
       }),

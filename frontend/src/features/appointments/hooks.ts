@@ -1,16 +1,15 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
-import { useAuth } from '@/features/auth';
-import { ApiError, createApiClient } from '@/lib/api/client';
-
 import {
   listSchedulableDoctors,
   scheduleAppointment,
   type ScheduleAppointmentInput,
   type ScheduleAppointmentResult,
   type SchedulableDoctor,
-} from './api';
+} from '@/api';
+import { useAuth } from '@/features/auth';
+import { ApiError, createApiClient } from '@/api';
 
 const DOCTOR_DIRECTORY_STALE_TIME_MS = 5 * 60 * 1000;
 

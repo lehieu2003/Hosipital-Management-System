@@ -1,17 +1,22 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { ApiError, createApiClient } from '@/lib/api/client';
+import { ApiError, createApiClient } from '@/api';
 import { useAuth, type UserRole } from '@/features/auth';
 
-export type OperationalScreenId = 'admin-overview' | 'reception-scheduling' | 'doctor-queue';
+export type OperationalScreenId =
+  | 'admin-overview'
+  | 'doctor-queue'
+  | 'reception-inpatients'
+  | 'reception-scheduling';
 export type OperationalScreenStatus = 'ready' | 'empty' | 'forbidden' | 'conflict' | 'unavailable';
 export type OperationalStateCode =
   | 'CONTRACT_PENDING'
   | 'FORBIDDEN'
   | 'CONFLICT'
   | 'UNAVAILABLE'
-  | 'UNKNOWN';
+  | 'UNKNOWN'
+  | string;
 
 export type OperationalFoundation = {
   screenId: OperationalScreenId;
@@ -57,6 +62,14 @@ const screenDefinitions: Record<
     endpointPath: null,
     role: 'receptionist',
     title: 'Scheduling foundation',
+  },
+  'reception-inpatients': {
+    contractLabel: 'reception inpatient operations',
+    description:
+      'Inpatient admission, occupancy, bed movement, and discharge actions stay blocked until the live IPD contract is verified.',
+    endpointPath: null,
+    role: 'receptionist',
+    title: 'Inpatient foundation',
   },
 };
 
@@ -183,6 +196,14 @@ function buildCapabilities(screenId: OperationalScreenId) {
     return [
       'Patient lookup and appointment booking entrypoint.',
       'Conflict-safe slot selection with explicit conflict and unavailable boundaries.',
+      'Stable screen status and diagnostic codes for browser and unit verification.',
+    ];
+  }
+
+  if (screenId === 'reception-inpatients') {
+    return [
+      'Reception inpatient admission and bed workflow entrypoint.',
+      'Conflict-safe occupancy and movement history boundaries.',
       'Stable screen status and diagnostic codes for browser and unit verification.',
     ];
   }

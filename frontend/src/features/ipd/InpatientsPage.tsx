@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { OperationalStateView } from '@/features/opd/components/OperationalStateView';
 import { SchedulingStateCard } from '@/features/appointments/components/scheduling-state-card';
 
-import type { IpdAdmission, IpdOccupancyEntry } from './api';
+import type { IpdAdmission, IpdOccupancyEntry } from '@/api';
 import {
   createFailedInpatientsActionState,
   createInitialInpatientsActionState,

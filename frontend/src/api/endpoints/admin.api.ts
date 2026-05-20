@@ -1,4 +1,5 @@
-import { ApiError, type ApiErrorCode, type createApiClient } from '@/lib/api/client';
+import { ApiError, type ApiErrorCode, type createApiClient } from '@/api/client';
+import { API_ENDPOINTS } from './api-endpoints';
 
 type ApiClient = ReturnType<typeof createApiClient>;
 type EnvelopeRecord = Record<string, unknown>;
@@ -38,7 +39,7 @@ class MalformedEnvelopeError extends Error {
 export async function listAdminDepartments(client: ApiClient): Promise<AdminDepartment[]> {
   try {
     const response = await withTimeout((signal) =>
-      client.get<unknown>('/admin/config/departments', {
+      client.get<unknown>(API_ENDPOINTS.admin.departments, {
         replayAfterRefresh: true,
         signal,
       }),
@@ -61,7 +62,7 @@ export async function createDepartment(
 ): Promise<AdminDepartment> {
   try {
     const response = await withTimeout((signal) =>
-      client.post<unknown>('/admin/config/departments', input, {
+      client.post<unknown>(API_ENDPOINTS.admin.departments, input, {
         replayAfterRefresh: true,
         signal,
       }),
@@ -79,7 +80,7 @@ export async function assignDepartmentDoctor(
 ): Promise<AdminDepartment> {
   try {
     const response = await withTimeout((signal) =>
-      client.request<unknown>(`/admin/config/departments/${encodeURIComponent(input.departmentId)}/doctor-assignment`, {
+      client.request<unknown>(API_ENDPOINTS.admin.departmentDoctorAssignment(input.departmentId), {
         body: {
           doctorUserId: input.doctorUserId,
         },

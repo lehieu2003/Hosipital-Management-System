@@ -1,4 +1,5 @@
-import { ApiError, type ApiErrorCode, type RequestOptions, type createApiClient } from '@/lib/api/client';
+import { ApiError, type ApiErrorCode, type RequestOptions, type createApiClient } from '@/api/client';
+import { API_ENDPOINTS } from './api-endpoints';
 
 const REQUEST_TIMEOUT_MS = 8_000;
 
@@ -77,7 +78,7 @@ class MalformedEnvelopeError extends Error {
 export async function listSchedulableDoctors(client: ApiClient): Promise<SchedulableDoctor[]> {
   try {
     const response = await withTimeout((signal) =>
-      client.get<unknown>('/doctors', {
+      client.get<unknown>(API_ENDPOINTS.appointments.doctors, {
         replayAfterRefresh: true,
         signal,
       }),
@@ -95,7 +96,7 @@ export async function registerPatient(
 ): Promise<RegisteredPatient> {
   try {
     const response = await withTimeout((signal) =>
-      client.post<unknown>('/patients', input, {
+      client.post<unknown>(API_ENDPOINTS.appointments.patients, input, {
         replayAfterRefresh: true,
         signal,
       }),
@@ -113,7 +114,7 @@ export async function createAppointment(
 ): Promise<ScheduledAppointment> {
   try {
     const response = await withTimeout((signal) =>
-      client.post<unknown>('/appointments', input, {
+      client.post<unknown>(API_ENDPOINTS.appointments.collection, input, {
         replayAfterRefresh: true,
         signal,
       }),

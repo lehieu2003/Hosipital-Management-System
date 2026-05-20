@@ -1,4 +1,5 @@
-import { createApiClient } from '@/lib/api/client';
+import { createApiClient, type SessionManager } from '@/api/client';
+import { API_ENDPOINTS } from './api-endpoints';
 
 export type LoginRequest = {
   password: string;
@@ -26,9 +27,12 @@ export type MeSuccessEnvelope = {
   };
 };
 
-const apiClient = createApiClient();
+export function createAuthApi(sessionManager?: SessionManager) {
+  const apiClient = createApiClient({ sessionManager });
 
-export const authApi = {
-  getCurrentUser: () => apiClient.get<MeSuccessEnvelope>('/auth/me'),
-  login: (payload: LoginRequest) => apiClient.post<AuthSuccessEnvelope>('/auth/login', payload),
-};
+  return {
+    getCurrentUser: () => apiClient.get<MeSuccessEnvelope>(API_ENDPOINTS.auth.me),
+    login: (payload: LoginRequest) =>
+      apiClient.post<AuthSuccessEnvelope>(API_ENDPOINTS.auth.login, payload, { skipAuth: true }),
+  };
+}

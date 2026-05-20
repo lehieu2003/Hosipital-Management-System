@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createApiClient, type SessionManager } from '@/lib/api/client';
+import { createApiClient, type SessionManager } from '@/api';
 
 describe('createApiClient', () => {
   const fetchMock = vi.fn<typeof fetch>();

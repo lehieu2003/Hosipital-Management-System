@@ -7,7 +7,7 @@ import {
   type PropsWithChildren,
 } from 'react';
 
-import { ApiError, type ApiErrorCode, type SessionManager } from '@/lib/api/client';
+import { API_ENDPOINTS, ApiError, type ApiErrorCode, type SessionManager } from '@/api';
 import { appEnv } from '@/lib/config';
 import {
   AuthContext,
@@ -29,7 +29,7 @@ function isRefreshFailureCode(code: ApiErrorCode) {
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<UserSession | null>(() => readStoredSession());
   const [authStatus, setAuthStatus] = useState<AuthStatus>(() =>
-    readStoredSession() ? 'authenticated' : 'anonymous',
+    readStoredSession() ? 'booting' : 'anonymous',
   );
   const [sessionNotice, setSessionNotice] = useState<SessionNotice>(() =>
     readStoredSession() ? null : 'signed-out',
@@ -74,7 +74,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [failClosed],
   );
 
-  const refresh = useCallback(async (): Promise<UserSession | null> => {
+  const refresh = useCallback(async (options: { commitSession?: boolean } = {}): Promise<UserSession | null> => {
+    const commitSession = options.commitSession ?? true;
+
     if (!refreshPromiseRef.current) {
       setSessionNotice('expired');
       setAuthStatus((current) =>
@@ -83,7 +85,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       refreshPromiseRef.current = (async () => {
         try {
-          const response = await window.fetch(`${appEnv.apiBaseUrl}/auth/refresh`, {
+          const response = await window.fetch(`${appEnv.apiBaseUrl}${API_ENDPOINTS.auth.refresh}`, {
             method: 'POST',
             credentials: 'include',
           });
@@ -100,10 +102,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
           const payload = (await response.json()) as AuthSuccessEnvelope;
           const nextSession = toUserSession(payload.data);
-          validatedAccessTokenRef.current = nextSession.accessToken;
-          applySession(nextSession);
-          setSessionNotice(null);
-          setAuthStatus('authenticated');
+
+          if (commitSession) {
+            validatedAccessTokenRef.current = nextSession.accessToken;
+            applySession(nextSession);
+            setSessionNotice(null);
+            setAuthStatus('authenticated');
+          }
+
           return nextSession;
         } catch (error) {
           if (error instanceof ApiError && isRefreshFailureCode(error.code)) {
@@ -127,7 +133,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setSessionNotice(null);
       setAuthStatus('authenticating');
 
-      const response = await window.fetch(`${appEnv.apiBaseUrl}/auth/login`, {
+      const response = await window.fetch(`${appEnv.apiBaseUrl}${API_ENDPOINTS.auth.login}`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -154,7 +160,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const logout = useCallback(async () => {
     try {
-      await window.fetch(`${appEnv.apiBaseUrl}/auth/logout`, {
+      await window.fetch(`${appEnv.apiBaseUrl}${API_ENDPOINTS.auth.logout}`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -226,7 +232,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           init.replayAfterRefresh !== false
         ) {
           setSessionNotice('expired');
-          const nextSession = await refresh();
+          const nextSession = await refresh({ commitSession: false });
           if (nextSession) {
             return executeRequest<T>(path, init, nextSession.accessToken);
           }
@@ -244,7 +250,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setAuthStatus('booting');
 
       try {
-        const payload = await requestWithAuth<MeSuccessEnvelope>('/auth/me', {
+        const payload = await requestWithAuth<MeSuccessEnvelope>(API_ENDPOINTS.auth.me, {
           method: 'GET',
           replayAfterRefresh: true,
         });

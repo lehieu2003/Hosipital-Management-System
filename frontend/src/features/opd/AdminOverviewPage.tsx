@@ -15,14 +15,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { type ApiError } from '@/lib/api/client';
+import { type ApiError } from '@/api';
 
 import {
   useAdminDepartmentsQuery,
   useAssignDepartmentDoctorMutation,
   useCreateDepartmentMutation,
 } from '@/features/admin/hooks';
-import { type AdminDepartment } from '@/features/admin/api';
+import { type AdminDepartment } from '@/api';
 import { AdminConfigStateCard } from '@/features/admin/components/admin-config-state-card';
 
 type ValidationField = 'departmentName' | 'departmentId' | 'doctorUserId';

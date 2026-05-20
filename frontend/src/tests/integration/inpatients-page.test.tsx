@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -239,14 +239,6 @@ async function loginToInpatients(
   if (options.waitForPage !== false) {
     await screen.findByTestId('reception-inpatients-page');
   }
-}
-
-function receptionMeResponse() {
-  return meSuccessResponse({
-    role: 'receptionist',
-    userId: 'user-2',
-    username: 'reception',
-  });
 }
 
 function ipdOccupancyResponse(data: unknown) {

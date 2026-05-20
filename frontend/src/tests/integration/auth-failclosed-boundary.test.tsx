@@ -23,7 +23,7 @@ describe('auth fail-closed boundary integration', () => {
     window.sessionStorage.clear();
   });
 
-  it('replays bootstrap exactly once after refresh recovery and lands the live doctor queue shell', async () => {
+  it('replays auth bootstrap exactly once after refresh recovery before loading the live doctor queue shell', async () => {
     window.sessionStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -132,7 +132,7 @@ describe('auth fail-closed boundary integration', () => {
     );
 
     expect(authMeCalls.length).toBeGreaterThanOrEqual(2);
-    expect(queueCalls.length).toBeGreaterThanOrEqual(2);
+    expect(queueCalls.length).toBeGreaterThanOrEqual(1);
     expect(refreshCallsByUrl).toHaveLength(1);
 
     const authMeAuthorizations = authMeCalls.map(([, init]) => new Headers(init?.headers).get('Authorization'));
@@ -140,11 +140,11 @@ describe('auth fail-closed boundary integration', () => {
 
     expect(authMeAuthorizations).toContain('Bearer expired-doctor-token');
     expect(authMeAuthorizations).toContain('Bearer fresh-doctor-token');
-    expect(queueAuthorizations).toContain('Bearer expired-doctor-token');
     expect(queueAuthorizations).toContain('Bearer fresh-doctor-token');
+    expect(queueAuthorizations).not.toContain('Bearer expired-doctor-token');
   });
 
-  it('fails closed back to login when refresh recovery is rejected before the doctor queue can load', async () => {
+  it('fails closed back to login when refresh recovery is rejected without loading the doctor queue', async () => {
     window.sessionStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -166,10 +166,7 @@ describe('auth fail-closed boundary integration', () => {
         return apiErrorResponse(401, 'INVALID_REFRESH_TOKEN', 'Refresh token is invalid.');
       }
 
-      if (
-        (url === 'http://localhost:3000/api/v1/auth/me' || url === 'http://localhost:3000/api/v1/doctor/queue') &&
-        authorization === 'Bearer expired-doctor-token'
-      ) {
+      if (url === 'http://localhost:3000/api/v1/auth/me' && authorization === 'Bearer expired-doctor-token') {
         return apiErrorResponse(401, 'EXPIRED_ACCESS_TOKEN', 'Access token expired.');
       }
 
@@ -189,12 +186,10 @@ describe('auth fail-closed boundary integration', () => {
 
     expect(refreshCalls).toBe(1);
 
-    const expiredQueueCalls = fetchMock.mock.calls.filter(
-      ([url, init]) =>
-        url === 'http://localhost:3000/api/v1/doctor/queue' &&
-        new Headers(init?.headers).get('Authorization') === 'Bearer expired-doctor-token',
+    const queueCalls = fetchMock.mock.calls.filter(
+      ([url]) => url === 'http://localhost:3000/api/v1/doctor/queue',
     );
-    expect(expiredQueueCalls.length).toBeGreaterThanOrEqual(1);
+    expect(queueCalls).toHaveLength(0);
   });
 
   it('treats malformed persisted auth bootstrap state as anonymous and avoids protected fetches', async () => {

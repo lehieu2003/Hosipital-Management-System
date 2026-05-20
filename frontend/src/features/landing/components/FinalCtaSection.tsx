@@ -3,8 +3,16 @@ import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { resolveHomePath, useAuth } from '@/features/auth';
 
 export function FinalCtaSection() {
+  const { session } = useAuth();
+  const primaryHref = session ? resolveHomePath(session.role) : '/login';
+  const primaryLabel = session ? 'Open workspace' : 'Sign in';
+  const description = session
+    ? 'Continue into the protected workspace that matches your role and current operational responsibility.'
+    : 'Start at sign-in, then move into the protected workspace that matches the user’s role and current operational responsibility.';
+
   return (
     <section className="mx-auto max-w-7xl pt-2">
       <Card className="dashboard-card overflow-hidden border-cyan-100/80 bg-slate-950 py-0 text-white">
@@ -17,12 +25,12 @@ export function FinalCtaSection() {
               Built for admin setup, reception scheduling, and doctor queue flow in one clinical system.
             </h2>
             <p className="max-w-2xl text-base leading-7 text-slate-300">
-              Start at sign-in, then move into the protected workspace that matches the user’s role and current operational responsibility.
+              {description}
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
             <Button asChild className="h-12 rounded-xl bg-white px-6 text-cyan-900 hover:bg-cyan-50">
-              <Link to="/login">Sign in</Link>
+              <Link to={primaryHref}>{primaryLabel}</Link>
             </Button>
             <Button asChild className="h-12 rounded-xl border-white/12 bg-white/8 px-6 text-white hover:bg-white/14" variant="outline">
               <a href="#roles">Review roles</a>

@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { OperationalStateView } from '@/features/opd/components/OperationalStateView';
 
-import type { ScheduleAppointmentInput, SchedulableDoctor } from './api';
+import type { ScheduleAppointmentInput, SchedulableDoctor } from '@/api';
 import {
   resolveSchedulingBoundaryState,
   resolveSchedulingSubmissionState,

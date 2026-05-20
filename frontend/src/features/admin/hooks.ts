@@ -1,9 +1,6 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { useAuth } from '@/features/auth';
-import { createApiClient, type ApiError } from '@/lib/api/client';
-
 import {
   assignDepartmentDoctor,
   createDepartment,
@@ -11,7 +8,9 @@ import {
   type AdminDepartment,
   type AssignDepartmentDoctorInput,
   type CreateDepartmentInput,
-} from './api';
+} from '@/api';
+import { useAuth } from '@/features/auth';
+import { createApiClient, type ApiError } from '@/api';
 
 export const ADMIN_DEPARTMENTS_QUERY_KEY = ['admin', 'config', 'departments'] as const;
 const SCHEDULABLE_DOCTORS_QUERY_KEY = ['appointments', 'doctors'] as const;

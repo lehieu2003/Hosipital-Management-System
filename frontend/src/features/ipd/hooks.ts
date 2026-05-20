@@ -1,9 +1,6 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { useAuth } from '@/features/auth';
-import { ApiError, createApiClient } from '@/lib/api/client';
-
 import {
   admitPatient,
   assignBed,
@@ -19,7 +16,9 @@ import {
   type IpdBedMovement,
   type IpdOccupancyEntry,
   type TransferBedInput,
-} from './api';
+} from '@/api';
+import { useAuth } from '@/features/auth';
+import { ApiError, createApiClient } from '@/api';
 
 const IPD_OCCUPANCY_STALE_TIME_MS = 30_000;
 

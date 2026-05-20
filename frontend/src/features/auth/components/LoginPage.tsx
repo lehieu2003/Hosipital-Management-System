@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { ApiError } from '@/lib/api/client';
+import { ApiError } from '@/api';
 
 import { resolveHomePath } from '../index';
 import { useAuth } from '../hooks/use-auth';

@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
-import type { DoctorQueueAppointment } from '../api';
+import type { DoctorQueueAppointment } from '@/api';
 import { QueueFact } from './queue-fact';
 
 type QueueAction = {

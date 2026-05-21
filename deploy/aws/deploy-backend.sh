@@ -22,6 +22,12 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
+if ! grep -Eq '^[[:space:]]*DATABASE_URL=' "$ENV_FILE"; then
+  echo "Missing DATABASE_URL in backend env file: $ENV_FILE" >&2
+  echo "Add DATABASE_URL to the GitHub Actions BACKEND_ENV_FILE secret, then rerun the deployment." >&2
+  exit 1
+fi
+
 if docker compose version >/dev/null 2>&1; then
   compose=(docker compose)
 elif command -v docker-compose >/dev/null 2>&1; then

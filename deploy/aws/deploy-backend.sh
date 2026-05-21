@@ -48,6 +48,21 @@ export BACKEND_IMAGE
 
 "${compose[@]}" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate --remove-orphans
 
+for attempt in {1..30}; do
+  if docker exec hms-node-backend wget -qO- http://127.0.0.1:3000/api/v1/healthz >/dev/null 2>&1; then
+    echo "Backend health check passed."
+    break
+  fi
+
+  if [[ "$attempt" -eq 30 ]]; then
+    echo "Backend health check failed after ${attempt} attempts." >&2
+    docker logs --tail=120 hms-node-backend >&2 || true
+    exit 1
+  fi
+
+  sleep 2
+done
+
 docker image prune -f >/dev/null 2>&1 || true
 docker logout ghcr.io >/dev/null 2>&1 || true
 

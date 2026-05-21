@@ -191,6 +191,6 @@ jobs:
           set -a
           . "$APP_DIR/deploy-runtime.env"
           set +a
-          "$APP_DIR/deploy-backend.sh"
           rm -f "$APP_DIR/deploy-runtime.env"
+          "$APP_DIR/deploy-backend.sh"
           EOF

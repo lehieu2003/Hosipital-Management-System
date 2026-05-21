@@ -1,14 +1,9 @@
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  BillingInvoiceLineType,
-  BillingPaymentStatus,
-  BillingSettlementStatus,
-  BillingTransitionType,
-  InpatientAdmissionStatus,
-  UserRole,
-} from '@prisma/client/index';
+import prismaClientPkg, { type BillingInvoiceLineType as BillingInvoiceLineTypeType, type BillingPaymentStatus as BillingPaymentStatusType, type BillingSettlementStatus as BillingSettlementStatusType, type BillingTransitionType as BillingTransitionTypeType, type InpatientAdmissionStatus as InpatientAdmissionStatusType, type UserRole as UserRoleType } from '@prisma/client/index';
+
+const { BillingInvoiceLineType, BillingPaymentStatus, BillingSettlementStatus, BillingTransitionType, InpatientAdmissionStatus, UserRole } = prismaClientPkg;
 
 const {
   admissionStore,

@@ -1,7 +1,9 @@
-import { PrismaClient } from '@prisma/client/index';
+import prismaClientPkg, { type PrismaClient as PrismaClientType } from '@prisma/client/index';
+
+const { PrismaClient } = prismaClientPkg;
 
 const globalForPrisma = globalThis as typeof globalThis & {
-  prisma?: PrismaClient;
+  prisma?: PrismaClientType;
 };
 
 export const db =

@@ -1,4 +1,6 @@
-import { BillingTransitionType, type Prisma } from '@prisma/client/index';
+import prismaClientPkg, { type Prisma, type BillingTransitionType as BillingTransitionTypeType } from '@prisma/client/index';
+
+const { BillingTransitionType } = prismaClientPkg;
 
 import { transitionSelect } from './billing.select.js';
 import type {
@@ -14,7 +16,7 @@ export const createTransition = async (
   params: {
     invoiceId: string;
     actorUserId: string;
-    transitionType: BillingTransitionType;
+    transitionType: BillingTransitionTypeType;
     previous: BillingInvoiceTransitionSnapshot;
     next: BillingInvoiceTransitionSnapshot;
     context: Prisma.InputJsonObject;

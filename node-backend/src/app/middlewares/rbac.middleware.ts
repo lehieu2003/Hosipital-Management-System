@@ -1,4 +1,6 @@
-import { UserRole } from '@prisma/client/index';
+import prismaClientPkg, { type UserRole as UserRoleType } from '@prisma/client/index';
+
+const { UserRole } = prismaClientPkg;
 import type { NextFunction, Response } from 'express';
 
 import type { AuthenticatedRequest } from './auth.middleware.js';
@@ -12,7 +14,7 @@ const KNOWN_ROLES = new Set<string>(Object.values(UserRole));
 const forbiddenError = (message = 'Role is not permitted for this resource') =>
   new AppError(message, HTTP_STATUS.forbidden, ERROR_CODES.forbidden);
 
-export const requireRoles = (...allowedRoles: UserRole[]) => {
+export const requireRoles = (...allowedRoles: UserRoleType[]) => {
   return (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
     const principal = req.auth;
 
@@ -48,7 +50,7 @@ export const requireRoles = (...allowedRoles: UserRole[]) => {
       return next(forbiddenError());
     }
 
-    const principalRole = principal.role as UserRole;
+    const principalRole = principal.role as UserRoleType;
 
     if (!allowedRoles.includes(principalRole)) {
       logger.warn(

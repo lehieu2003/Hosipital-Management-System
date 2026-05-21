@@ -1,9 +1,6 @@
-import {
-  BillingInvoiceLineType,
-  BillingSettlementStatus,
-  BillingTransitionType,
-  type Prisma,
-} from '@prisma/client/index';
+import prismaClientPkg, { type Prisma, type BillingInvoiceLineType as BillingInvoiceLineTypeType, type BillingSettlementStatus as BillingSettlementStatusType, type BillingTransitionType as BillingTransitionTypeType } from '@prisma/client/index';
+
+const { BillingInvoiceLineType, BillingSettlementStatus, BillingTransitionType } = prismaClientPkg;
 
 import { db } from '../../../infrastructure/database/client.js';
 import { wrapBillingStoreError } from './billing.errors.js';

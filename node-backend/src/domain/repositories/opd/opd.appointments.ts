@@ -1,4 +1,6 @@
-import { AppointmentStatus } from '@prisma/client/index';
+import prismaClientPkg, { type AppointmentStatus as AppointmentStatusType } from '@prisma/client/index';
+
+const { AppointmentStatus } = prismaClientPkg;
 
 import { db } from '../../../infrastructure/database/client.js';
 import { wrapOpdStoreError } from './opd.errors.js';
@@ -117,7 +119,7 @@ export class OpdAppointmentQueries {
           doctorUserId?: string;
           scheduledAt?: Date;
           durationMinutes?: number;
-          status?: AppointmentStatus;
+          status?: AppointmentStatusType;
           notes?: string | null;
           version: { increment: number };
         } = {

@@ -1,15 +1,6 @@
-import {
-  BillingPaymentStatus,
-  BillingSettlementStatus,
-  type BillingChargeIdempotency,
-  type BillingInvoice,
-  type BillingInvoiceLine,
-  type BillingPayment,
-  type BillingTransitionHistory,
-  type Patient,
-  type Prisma,
-  type User,
-} from '@prisma/client/index';
+import prismaClientPkg, { type BillingChargeIdempotency, type BillingInvoice, type BillingInvoiceLine, type BillingPayment, type BillingTransitionHistory, type Patient, type Prisma, type User, type BillingPaymentStatus as BillingPaymentStatusType, type BillingSettlementStatus as BillingSettlementStatusType } from '@prisma/client/index';
+
+const { BillingPaymentStatus, BillingSettlementStatus } = prismaClientPkg;
 
 export type BillingActorRecord = Pick<
   User,
@@ -109,8 +100,8 @@ export type BillingInvoiceRecord = Pick<
 };
 
 export type BillingInvoiceTransitionSnapshot = {
-  paymentStatus: BillingPaymentStatus;
-  settlementStatus: BillingSettlementStatus;
+  paymentStatus: BillingPaymentStatusType;
+  settlementStatus: BillingSettlementStatusType;
   balanceMinor: number;
   dischargedAt: Date | null;
   settledAt: Date | null;

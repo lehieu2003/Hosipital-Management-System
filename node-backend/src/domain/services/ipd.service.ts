@@ -1,4 +1,6 @@
-import { InpatientAdmissionStatus, UserRole } from '@prisma/client/index';
+import prismaClientPkg, { type InpatientAdmissionStatus as InpatientAdmissionStatusType, type UserRole as UserRoleType } from '@prisma/client/index';
+
+const { InpatientAdmissionStatus, UserRole } = prismaClientPkg;
 
 import type { AuthPrincipal } from '../../app/middlewares/auth.middleware.js';
 import { ERROR_CODES } from '../../shared/constants/error-codes.js';

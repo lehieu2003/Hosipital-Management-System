@@ -1,11 +1,6 @@
-import {
-  AppointmentStatus,
-  type Appointment,
-  type Patient,
-  type PatientGender,
-  type Prisma,
-  type User,
-} from '@prisma/client/index';
+import prismaClientPkg, { type Appointment, type Patient, type PatientGender, type Prisma, type User, type AppointmentStatus as AppointmentStatusType } from '@prisma/client/index';
+
+const { AppointmentStatus } = prismaClientPkg;
 
 export type CreatePatientRecordInput = {
   fullName: string;
@@ -41,7 +36,7 @@ export type UpdateAppointmentRecordInput = {
   doctorUserId?: string;
   scheduledAt?: Date;
   durationMinutes?: number;
-  status?: AppointmentStatus;
+  status?: AppointmentStatusType;
   notes?: string | null;
 };
 

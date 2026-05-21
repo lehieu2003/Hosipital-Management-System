@@ -1,4 +1,6 @@
-import { BillingPaymentStatus, BillingSettlementStatus } from '@prisma/client/index';
+import prismaClientPkg, { type BillingPaymentStatus as BillingPaymentStatusType, type BillingSettlementStatus as BillingSettlementStatusType } from '@prisma/client/index';
+
+const { BillingPaymentStatus, BillingSettlementStatus } = prismaClientPkg;
 
 import { ERROR_CODES } from '../../../shared/constants/error-codes.js';
 import { AppError } from '../../../shared/errors/app-error.js';
@@ -47,8 +49,8 @@ export const computeSettlementState = ({
 };
 
 export const buildInvoiceSnapshot = (invoice: {
-  paymentStatus: BillingPaymentStatus;
-  settlementStatus: BillingSettlementStatus;
+  paymentStatus: BillingPaymentStatusType;
+  settlementStatus: BillingSettlementStatusType;
   balanceMinor: number;
   dischargedAt: Date | null;
   settledAt: Date | null;

@@ -1,4 +1,6 @@
-import { AppointmentStatus, PatientGender } from '@prisma/client/index';
+import prismaClientPkg, { type AppointmentStatus as AppointmentStatusType, type PatientGender as PatientGenderType } from '@prisma/client/index';
+
+const { AppointmentStatus, PatientGender } = prismaClientPkg;
 import { z } from 'zod';
 
 const trimmedString = (max: number) => z.string().trim().min(1).max(max);

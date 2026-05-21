@@ -1,11 +1,6 @@
-import {
-  InpatientAdmissionStatus,
-  type Bed,
-  type BedOccupancy,
-  type InpatientAdmission,
-  type InpatientBedMovement,
-  type User,
-} from '@prisma/client/index';
+import prismaClientPkg, { type Bed, type BedOccupancy, type InpatientAdmission, type InpatientBedMovement, type User, type InpatientAdmissionStatus as InpatientAdmissionStatusType } from '@prisma/client/index';
+
+const { InpatientAdmissionStatus } = prismaClientPkg;
 
 import type { BillingInvoiceRecord } from '../billing/billing.types.js';
 
@@ -125,7 +120,7 @@ export type CurrentBedOccupancyRecord = BedOccupancyRecord & {
   admission: {
     id: string;
     patientId: string;
-    status: InpatientAdmissionStatus;
+    status: InpatientAdmissionStatusType;
     admittedAt: Date;
     dischargeAt: Date | null;
     version: number;

@@ -133,9 +133,15 @@ describe('authoritative Node persistence contract', () => {
 
     expectIncludes(
       clientSource,
-      "import { PrismaClient } from '@prisma/client/index';",
+      "import prismaClientPkg, { type PrismaClient as PrismaClientType } from '@prisma/client/index';",
       contractFiles.dbClient,
       'PrismaClient import',
+    );
+    expectIncludes(
+      clientSource,
+      'const { PrismaClient } = prismaClientPkg;',
+      contractFiles.dbClient,
+      'PrismaClient CommonJS default destructuring',
     );
     expectIncludes(
       clientSource,

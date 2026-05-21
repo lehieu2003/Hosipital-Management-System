@@ -1,4 +1,6 @@
-import { UserRole } from '@prisma/client/index';
+import prismaClientPkg, { type UserRole as UserRoleType } from '@prisma/client/index';
+
+const { UserRole } = prismaClientPkg;
 import jwt from 'jsonwebtoken';
 
 import { appConfig } from '../../shared/configs/app.config.js';

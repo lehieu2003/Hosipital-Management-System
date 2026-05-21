@@ -1,4 +1,6 @@
-import { AppointmentStatus, UserRole, type PatientGender } from '@prisma/client/index';
+import prismaClientPkg, { type PatientGender, type AppointmentStatus as AppointmentStatusType, type UserRole as UserRoleType } from '@prisma/client/index';
+
+const { AppointmentStatus, UserRole } = prismaClientPkg;
 
 import type { AuthPrincipal } from '../../app/middlewares/auth.middleware.js';
 import { ERROR_CODES } from '../../shared/constants/error-codes.js';
@@ -41,7 +43,7 @@ export type UpdateAppointmentInput = {
   doctorUserId?: string;
   scheduledAt?: string;
   durationMinutes?: number;
-  status?: AppointmentStatus;
+  status?: AppointmentStatusType;
   notes?: string | null;
 };
 
@@ -66,7 +68,7 @@ export type DoctorDirectoryEntry = Pick<OpdDoctorDirectoryRecord, 'id' | 'userna
   departmentName: string;
 };
 
-const DOCTOR_ALLOWED_STATUS_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
+const DOCTOR_ALLOWED_STATUS_TRANSITIONS: Record<AppointmentStatusType, AppointmentStatusType[]> = {
   [AppointmentStatus.SCHEDULED]: [AppointmentStatus.CHECKED_IN],
   [AppointmentStatus.CHECKED_IN]: [AppointmentStatus.COMPLETED],
   [AppointmentStatus.COMPLETED]: [],

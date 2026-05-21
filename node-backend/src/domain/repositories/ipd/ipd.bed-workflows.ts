@@ -1,4 +1,6 @@
-import { BedMovementType, InpatientAdmissionStatus } from '@prisma/client/index';
+import prismaClientPkg, { type BedMovementType as BedMovementTypeType, type InpatientAdmissionStatus as InpatientAdmissionStatusType } from '@prisma/client/index';
+
+const { BedMovementType, InpatientAdmissionStatus } = prismaClientPkg;
 
 import { db } from '../../../infrastructure/database/client.js';
 import { syncBillingSettlementForDischargeTx } from '../billing.repository.js';

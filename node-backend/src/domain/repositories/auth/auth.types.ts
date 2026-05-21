@@ -1,9 +1,11 @@
-import { type RefreshSession, UserRole, type User } from '@prisma/client/index';
+import prismaClientPkg, { type RefreshSession, type User, type UserRole as UserRoleType } from '@prisma/client/index';
+
+const { UserRole } = prismaClientPkg;
 
 export type CreateUserRecordInput = {
   username: string;
   passwordHash: string;
-  role: UserRole;
+  role: UserRoleType;
   isActive?: boolean;
 };
 

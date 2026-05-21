@@ -1,4 +1,6 @@
-import { UserRole } from '@prisma/client/index';
+import prismaClientPkg, { type UserRole as UserRoleType } from '@prisma/client/index';
+
+const { UserRole } = prismaClientPkg;
 import { Router } from 'express';
 
 import type { AuthenticatedRequest } from '../../middlewares/auth.middleware.js';
@@ -7,7 +9,7 @@ import { denyByDefault, requireRoles } from '../../middlewares/rbac.middleware.j
 
 export const probeRoutes = Router();
 
-const buildProbeResponse = (req: AuthenticatedRequest, route: string, requiredRoles: UserRole[]) => ({
+const buildProbeResponse = (req: AuthenticatedRequest, route: string, requiredRoles: UserRoleType[]) => ({
   success: true,
   data: {
     route,

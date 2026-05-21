@@ -1,7 +1,9 @@
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UserRole } from '@prisma/client/index';
+import prismaClientPkg, { type UserRole as UserRoleType } from '@prisma/client/index';
+
+const { UserRole } = prismaClientPkg;
 
 const { dbMock, dbState, userStore } = vi.hoisted(() => {
   const userStore = new Map<string, any>();

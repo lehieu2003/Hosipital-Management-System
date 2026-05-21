@@ -1,8 +1,6 @@
-import {
-  BillingPaymentStatus,
-  BillingSettlementStatus,
-  type Prisma,
-} from '@prisma/client/index';
+import prismaClientPkg, { type Prisma, type BillingPaymentStatus as BillingPaymentStatusType, type BillingSettlementStatus as BillingSettlementStatusType } from '@prisma/client/index';
+
+const { BillingPaymentStatus, BillingSettlementStatus } = prismaClientPkg;
 
 import { invoiceSelect } from './billing.select.js';
 import { createInitialTransition } from './billing.transitions.js';

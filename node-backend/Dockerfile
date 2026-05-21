@@ -29,4 +29,4 @@ COPY package*.json ./
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=5 \
   CMD wget -qO- http://127.0.0.1:3000/api/v1/healthz >/dev/null 2>&1 || exit 1
-CMD ["node", "dist/server.js"]
+CMD ["node", "dist/src/server.js"]

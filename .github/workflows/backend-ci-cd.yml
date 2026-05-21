@@ -94,7 +94,7 @@ jobs:
 
       - name: Log in to GHCR
         shell: bash
-        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Build Docker image
         run: |
@@ -119,6 +119,7 @@ jobs:
       APP_DIR: /home/${{ secrets.AWS_EC2_SSH_USER }}/hms-backend
       SSH_HOST: ${{ secrets.AWS_EC2_SSH_HOST }}
       SSH_PORT: ${{ secrets.AWS_EC2_SSH_PORT }}
+      SSH_PRIVATE_KEY: ${{ secrets.AWS_EC2_SSH_PRIVATE_KEY }}
       SSH_USER: ${{ secrets.AWS_EC2_SSH_USER }}
     steps:
       - name: Checkout
@@ -127,13 +128,16 @@ jobs:
       - name: Prepare SSH key
         shell: bash
         run: |
+          : "${SSH_HOST:?Missing secret AWS_EC2_SSH_HOST}"
+          : "${SSH_USER:?Missing secret AWS_EC2_SSH_USER}"
+          : "${SSH_PRIVATE_KEY:?Missing secret AWS_EC2_SSH_PRIVATE_KEY}"
           mkdir -p ~/.ssh
-          printf '%s' "${{ secrets.AWS_EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/aws_ec2_key
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/aws_ec2_key
           chmod 600 ~/.ssh/aws_ec2_key
           if [ -z "$SSH_PORT" ]; then
             SSH_PORT=22
           fi
-          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -T 10 -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
       - name: Copy deployment assets to server
         shell: bash

@@ -1,4 +1,4 @@
-import { AppointmentStatus, UserRole, type PatientGender } from '@prisma/client';
+import { AppointmentStatus, UserRole, type PatientGender } from '@prisma/client/index';
 
 import type { AuthPrincipal } from '../../app/middlewares/auth.middleware.js';
 import { ERROR_CODES } from '../../shared/constants/error-codes.js';

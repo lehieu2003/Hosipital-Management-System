@@ -1,4 +1,4 @@
-import { AppointmentStatus } from '@prisma/client';
+import { AppointmentStatus } from '@prisma/client/index';
 
 import { db } from '../../../infrastructure/database/client.js';
 import { wrapOpdStoreError } from './opd.errors.js';

@@ -8,7 +8,7 @@ import {
   BillingTransitionType,
   InpatientAdmissionStatus,
   UserRole,
-} from '@prisma/client';
+} from '@prisma/client/index';
 
 const {
   admissionStore,

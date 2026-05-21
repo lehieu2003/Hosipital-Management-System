@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client/index';
 
 const invoiceLineOrderBy: Prisma.BillingInvoiceLineOrderByWithRelationInput[] =
   [{ createdAt: 'asc' }, { id: 'asc' }];

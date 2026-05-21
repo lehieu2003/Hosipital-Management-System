@@ -1,4 +1,4 @@
-import { type RefreshSession, UserRole, type User } from '@prisma/client';
+import { type RefreshSession, UserRole, type User } from '@prisma/client/index';
 
 export type CreateUserRecordInput = {
   username: string;

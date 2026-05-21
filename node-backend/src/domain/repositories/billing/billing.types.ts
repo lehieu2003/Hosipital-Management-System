@@ -9,7 +9,7 @@ import {
   type Patient,
   type Prisma,
   type User,
-} from '@prisma/client';
+} from '@prisma/client/index';
 
 export type BillingActorRecord = Pick<
   User,

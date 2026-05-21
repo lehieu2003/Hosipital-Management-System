@@ -1,4 +1,4 @@
-import { BillingTransitionType, type Prisma } from '@prisma/client';
+import { BillingTransitionType, type Prisma } from '@prisma/client/index';
 
 import { transitionSelect } from './billing.select.js';
 import type {

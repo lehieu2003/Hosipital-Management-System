@@ -2,7 +2,7 @@ import {
   BillingPaymentStatus,
   BillingSettlementStatus,
   type Prisma,
-} from '@prisma/client';
+} from '@prisma/client/index';
 
 import { invoiceSelect } from './billing.select.js';
 import { createInitialTransition } from './billing.transitions.js';

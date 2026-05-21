@@ -5,7 +5,7 @@ import {
   type InpatientAdmission,
   type InpatientBedMovement,
   type User,
-} from '@prisma/client';
+} from '@prisma/client/index';
 
 import type { BillingInvoiceRecord } from '../billing/billing.types.js';
 

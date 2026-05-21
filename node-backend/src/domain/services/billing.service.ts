@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { UserRole, type Prisma } from '@prisma/client';
+import { UserRole, type Prisma } from '@prisma/client/index';
 
 import type { AuthPrincipal } from '../../app/middlewares/auth.middleware.js';
 import { ERROR_CODES } from '../../shared/constants/error-codes.js';

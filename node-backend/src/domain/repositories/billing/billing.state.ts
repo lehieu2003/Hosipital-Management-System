@@ -1,4 +1,4 @@
-import { BillingPaymentStatus, BillingSettlementStatus } from '@prisma/client';
+import { BillingPaymentStatus, BillingSettlementStatus } from '@prisma/client/index';
 
 import { ERROR_CODES } from '../../../shared/constants/error-codes.js';
 import { AppError } from '../../../shared/errors/app-error.js';

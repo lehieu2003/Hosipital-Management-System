@@ -1,4 +1,4 @@
-import { UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client/index';
 import type { NextFunction, Response } from 'express';
 
 import type { AuthenticatedRequest } from './auth.middleware.js';

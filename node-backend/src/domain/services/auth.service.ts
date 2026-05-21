@@ -1,4 +1,4 @@
-import { UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client/index';
 import jwt from 'jsonwebtoken';
 
 import { appConfig } from '../../shared/configs/app.config.js';

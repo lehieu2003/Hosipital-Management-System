@@ -133,7 +133,7 @@ describe('authoritative Node persistence contract', () => {
 
     expectIncludes(
       clientSource,
-      "import { PrismaClient } from '@prisma/client';",
+      "import { PrismaClient } from '@prisma/client/index';",
       contractFiles.dbClient,
       'PrismaClient import',
     );

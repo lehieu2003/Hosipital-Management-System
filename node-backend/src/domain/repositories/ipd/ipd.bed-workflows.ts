@@ -1,4 +1,4 @@
-import { BedMovementType, InpatientAdmissionStatus } from '@prisma/client';
+import { BedMovementType, InpatientAdmissionStatus } from '@prisma/client/index';
 
 import { db } from '../../../infrastructure/database/client.js';
 import { syncBillingSettlementForDischargeTx } from '../billing.repository.js';

@@ -1,4 +1,4 @@
-import { InpatientAdmissionStatus, UserRole } from '@prisma/client';
+import { InpatientAdmissionStatus, UserRole } from '@prisma/client/index';
 
 import type { AuthPrincipal } from '../../app/middlewares/auth.middleware.js';
 import { ERROR_CODES } from '../../shared/constants/error-codes.js';

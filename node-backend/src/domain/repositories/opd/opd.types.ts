@@ -5,7 +5,7 @@ import {
   type PatientGender,
   type Prisma,
   type User,
-} from '@prisma/client';
+} from '@prisma/client/index';
 
 export type CreatePatientRecordInput = {
   fullName: string;

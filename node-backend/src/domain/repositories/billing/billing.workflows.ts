@@ -3,7 +3,7 @@ import {
   BillingSettlementStatus,
   BillingTransitionType,
   type Prisma,
-} from '@prisma/client';
+} from '@prisma/client/index';
 
 import { db } from '../../../infrastructure/database/client.js';
 import { wrapBillingStoreError } from './billing.errors.js';

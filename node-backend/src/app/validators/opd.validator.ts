@@ -1,4 +1,4 @@
-import { AppointmentStatus, PatientGender } from '@prisma/client';
+import { AppointmentStatus, PatientGender } from '@prisma/client/index';
 import { z } from 'zod';
 
 const trimmedString = (max: number) => z.string().trim().min(1).max(max);

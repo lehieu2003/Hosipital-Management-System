@@ -1,0 +1,16 @@
+node_modules
+dist
+coverage
+.vitest
+.env
+.env.*
+*.log
+npm-debug.log*
+Dockerfile
+.dockerignore
+.git
+.gsd
+.artifacts
+.bg-shell
+README.md
+tests

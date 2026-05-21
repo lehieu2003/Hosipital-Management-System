@@ -1,0 +1,10 @@
+[mcp_servers.gsd-workflow]
+args = ['C:\Users\daong\AppData\Roaming\npm\node_modules\gsd-pi\packages\mcp-server\dist\cli.js']
+command = 'C:\Program Files\nodejs\node.exe'
+
+[mcp_servers.gsd-workflow.env]
+GSD_CLI_PATH = 'C:\Users\daong\AppData\Roaming\npm\node_modules\gsd-pi\dist\loader.js'
+GSD_PERSIST_WRITE_GATE_STATE = "1"
+GSD_WORKFLOW_EXECUTORS_MODULE = 'C:\Users\daong\.gsd\agent\extensions\gsd\tools\workflow-tool-executors.js'
+GSD_WORKFLOW_PROJECT_ROOT = 'D:\Hosipital Management System'
+GSD_WORKFLOW_WRITE_GATE_MODULE = 'C:\Users\daong\.gsd\agent\extensions\gsd\bootstrap\write-gate.js'

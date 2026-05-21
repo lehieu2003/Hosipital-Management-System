@@ -124,8 +124,13 @@ If your EC2 instance is not Ubuntu, install Docker using the matching distro ins
 - Backend workflow pushes both `sha-<commit>` and `latest` tags to GHCR.
 - Deployment uses the immutable `sha-<commit>` tag, not `latest`.
 - `prisma migrate deploy` runs during backend deployment before the container is restarted.
+- Backend deploy is health-gated. If the container starts but `/api/v1/healthz` does not respond, the deploy job fails and prints recent container logs.
 - The deploy script expects `backend.env` and `docker-compose.backend.yml` inside `~/hms-backend` unless overridden.
 - Swagger routes remain disabled in backend production because that behavior already exists in the app.
+
+## Debugging production deploys
+
+For the incident notes and repeatable debug flow used to fix the backend deployment, see [Backend Deployment Debug Report](docs/backend-deployment-debug-report.md).
 
 ## Manual verification after first setup
 

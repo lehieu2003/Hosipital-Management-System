@@ -22,16 +22,27 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
+if docker compose version >/dev/null 2>&1; then
+  compose=(docker compose)
+elif command -v docker-compose >/dev/null 2>&1; then
+  compose=(docker-compose)
+else
+  echo "Docker Compose is not installed on this EC2 instance." >&2
+  echo "Install the Docker Compose plugin, then rerun the deployment:" >&2
+  echo "  sudo yum install -y docker-compose-plugin" >&2
+  exit 1
+fi
+
 echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
 export BACKEND_IMAGE
 
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull
+"${compose[@]}" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull
 
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" run --rm backend npx prisma migrate deploy
+"${compose[@]}" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" run --rm backend npx prisma migrate deploy
 
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate --remove-orphans
+"${compose[@]}" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate --remove-orphans
 
 docker image prune -f >/dev/null 2>&1 || true
 docker logout ghcr.io >/dev/null 2>&1 || true
 
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps
+"${compose[@]}" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps
